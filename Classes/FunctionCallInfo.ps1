@@ -54,9 +54,9 @@ class FunctionCallInfo
 
         [FunctionCallInfo]::_InheritedProperties | ForEach-Object {
             Add-Member ScriptProperty -InputObject $this -Name $_ -Value (
-                [scriptblock]::Create("`$this.Function.`$_")
+                [scriptblock]::Create("`$this.Function.$_")
             ) -SecondValue (
-                [scriptblock]::Create("`$this.Function.`$_ = `$args[0]")
+                [scriptblock]::Create("`$this.Function.$_ = `$args[0]")
             )
         }
     }
