@@ -28,8 +28,7 @@
                 'AST',
                 'Dependency',
                 'Function',
-                'Parse',
-                'Static analysis'
+                'Parse'
             )
         }
     }
