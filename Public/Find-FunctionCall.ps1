@@ -4,79 +4,59 @@ function Find-FunctionCall
     param
     (
         [Parameter(ParameterSetName = 'Ast', Mandatory, ValueFromPipeline)]
-        [Management.Automation.Language.Ast]$FunctionAst,
-
-        [Parameter(ParameterSetName = 'Name', Mandatory, ValueFromPipeline)]
-        [string]$Name,
-
-        [Parameter(ParameterSetName = 'Token', Mandatory, ValueFromPipeline)]
-        [Management.Automation.Language.Token]$Token,
+        [Management.Automation.FunctionInfo]$Function,
 
         [Parameter()]
-        [psmoduleinfo]$Module
-    )
+        [int]$Depth = 4,
 
-    begin
-    {
-        if (-not $_BuiltInCommands)
-        {
-            $_BuiltInCommands = [Collections.Generic.HashSet[string]]::new()
-        }
-    }
+        [Parameter(DontShow)]
+        [int]$_CallDepth = 0,
+
+        [Parameter(DontShow)]
+        [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
+    )
 
     process
     {
-        if ($PSCmdlet.ParameterSetName -eq 'Name')
+        # Returns false if already in set
+        if (-not $_SeenFunctions.Add($Function))
         {
-            $Resolver = {Get-Command $args[0] -CommandType Function -ErrorAction Stop}
-            $Command = if ($Module)
-            {
-                & $Module $Resolver $Name
-            }
-            else
-            {
-                & $Resolver $Name
-            }
-
-            Write-Verbose "Resolved command '$Name' from '$($Command.Source)'"
-            $Def = "function $Name {$($Command.Definition)}"
-            # $ScriptblockAst = [Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
-            # $FunctionAst = $ScriptblockAst.EndBlock.Statements[0]
-        }
-        elseif ($PSCmdlet.ParameterSetName -eq 'Ast')
-        {
-            $Def = $FunctionAst.Extent.Text
-        }
-        elseif ($PSCmdlet.ParameterSetName -eq 'Token')
-        {
-            $Tokens = @($Token)
+            return
         }
 
-        if ($PSCmdlet.ParameterSetName -ne 'Token')
+        $Function
+
+        if ($_CallDepth -ge $Depth)
         {
-            $Tokens = @()
-            [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
+            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth."
+            return
         }
+
+
+        $Def = "function $($Function.Name) {$($Function.Definition)}"
+        $Tokens = @()
+        [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
+
 
         $CommandTokens = $Tokens | Where-Object {$_.TokenFlags -band 'CommandName'}
-
-        $CalledCommandNames = $CommandTokens.Text | Sort-Object -Unique | Where-Object {$_ -notin $_BuiltInCommands}
-
-        $Resolver = {$args | Get-Command}
-
-        $CalledCommands = if ($Module)
+        $CalledCommandNames = $CommandTokens.Text | Sort-Object -Unique
+        if (-not $CalledCommandNames)
         {
-            & $Module $Resolver $CalledCommandNames
+            return
+        }
+
+
+        $CalledCommands = if ($Function.Module)
+        {
+            & $Function.Module {$args | Get-Command} $CalledCommandNames
         }
         else
         {
-            & $Resolver $CalledCommandNames
+            Get-Command $CalledCommandNames
         }
+        $CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
 
-        $Splat = [hashtable]$PSBoundParameters
-        $Splat.Remove('FunctionAst')
-        $Splat.Remove('Name')
 
-        $CalledCommands
+        $CalledFunctions | Find-FunctionCall -Depth $Depth -_CallDepth ($_CallDepth + 1) -_SeenFunctions $_SeenFunctions
     }
 }
