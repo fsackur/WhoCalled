@@ -163,7 +163,6 @@ function Find-FunctionCall
         {
             & $Resolver $CalledCommandNames
         }
-        # [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
 
         if (-not $CalledCommands)
         {
