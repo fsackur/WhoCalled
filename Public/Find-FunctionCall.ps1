@@ -56,13 +56,13 @@ function Find-FunctionCall
     #>
 
     [OutputType([FunctionCallInfo[]])]
-    [CmdletBinding(DefaultParameterSetName = 'FromFunction')]
+    [CmdletBinding(DefaultParameterSetName = 'FromFunction', PositionalBinding = $false)]
     param
     (
-        [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline)]
+        [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline, Position = 0)]
         [string]$Name,
 
-        [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline)]
+        [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline, Position = 0)]
         [Management.Automation.FunctionInfo]$Function,
 
         [Parameter()]
