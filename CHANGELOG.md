@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.1.2
+
+- Fix positional binding for `-Name` and `-Function` parameters
+
 ## 1.1.1
 
 - Fix missing output properties
