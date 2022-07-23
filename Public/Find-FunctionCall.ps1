@@ -52,7 +52,7 @@ class FunctionCallInfo
         $this.Name = $Function.Name
         $this.Source = $Function.Source
         $this.Module = $Function.Module
-        $this.Calls = [System.Collections.Generic.List[FunctionCallInfo]]::new()
+        $this.Calls = [Collections.Generic.List[FunctionCallInfo]]::new()
     }
 }
 
@@ -108,6 +108,8 @@ function Find-FunctionCall
             $CallingFunction
         }
 
+        $_CallDepth++
+
 
         $Def = "function $($Function.Name) {$($Function.Definition)}"
         $Tokens = @()
@@ -132,9 +134,28 @@ function Find-FunctionCall
         }
         [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
 
-        $CalledFunctions
-        # $Calls = $CalledFunctions | Find-FunctionCall -Depth $Depth -_CallDepth ($_CallDepth + 1) -_SeenFunctions $_SeenFunctions
+        if (-not $CalledFunctions)
+        {
+            return
+        }
 
-        # $Calls | ForEach-Object {$_.CalledBy = $CallingFunction}
+
+        $CalledFunctions | ForEach-Object {
+            $_.Depth = $_CallDepth
+            $_.CalledBy = $CallingFunction
+
+            # Recurse
+            [FunctionCallInfo[]]$CallsOfCalls = $_ |
+                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions
+
+            $_ | Write-Output
+
+            if ($CallsOfCalls)
+            {
+                $_.Calls.AddRange($CallsOfCalls)
+
+                $CallsOfCalls | Write-Output
+            }
+        }
     }
 }
