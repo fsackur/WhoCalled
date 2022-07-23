@@ -128,29 +128,58 @@ function Find-FunctionCall
         }
 
 
-        $CalledCommands = if ($Function.Module)
+        $Resolver = {
+            param
+            (
+                [string[]]$CommandNames,
+                [string]$ModuleName
+            )
+
+            foreach ($CommandName in $CommandNames)
+            {
+                try
+                {
+                    [FunctionCallInfo](Get-Command $CommandName -ErrorAction Stop)
+                }
+                catch [Management.Automation.CommandNotFoundException]
+                {
+                    [UnresolvedFunctionCallInfo]$CommandName
+
+                    $_.ErrorDetails = "Command resolution failed for command '$CommandName'$(if ($ModuleName) {" in module '$ModuleName'"})."
+                    Write-Error -ErrorRecord $_
+                }
+                catch
+                {
+                    Write-Error -ErrorRecord $_
+                }
+            }
+        }
+
+        [IFunctionCallInfo[]]$CalledCommands = if ($Function.Module)
         {
-            $Function.Module.Invoke({$args | Get-Command}, @(,$CalledCommandNames))
+            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name))
         }
         else
         {
-            Get-Command $CalledCommandNames
+            & $Resolver $CalledCommandNames
         }
-        [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
+        # [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
 
-        if (-not $CalledFunctions)
+        if (-not $CalledCommands)
         {
             return
         }
 
 
-        $CalledFunctions | ForEach-Object {
+        $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
 
             # Recurse
-            [FunctionCallInfo[]]$CallsOfCalls = $_ |
-                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions
+            [IFunctionCallInfo[]]$CallsOfCalls = $_ |
+                Where-Object CommandType -eq 'Function' |
+                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions |
+                Where-Object Name
 
             $_ | Write-Output
 
