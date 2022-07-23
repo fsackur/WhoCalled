@@ -44,12 +44,23 @@ class FunctionCallInfo
     )
 
 
+    FunctionCallInfo ([string]$Name)
+    {
+        $this.Name = $Name
+        $this.Initialise()
+    }
+
     FunctionCallInfo ([Management.Automation.FunctionInfo]$Function)
     {
         $this.Function = $Function
         $this.Name = $Function.Name
         $this.Source = $Function.Source
         $this.Module = $Function.Module
+        $this.Initialise()
+    }
+
+    [void] Initialise()
+    {
         $this.Calls = [Collections.Generic.List[FunctionCallInfo]]::new()
 
         [FunctionCallInfo]::_InheritedProperties | ForEach-Object {
@@ -63,16 +74,39 @@ class FunctionCallInfo
 
     [bool] Equals([object]$obj)
     {
-        return $this.Function.Equals($obj)
+        if ($this.Function)
+        {
+            return $this.Function.Equals($obj)
+        }
+        else
+        {
+            return $this.Name -eq $Obj.Name -and
+            $this.Source -eq $Obj.Source -and
+            $this.Module -eq $Obj.Module
+        }
     }
 
     [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
     {
-        return $this.Function.ResolveParameter($name)
+        if ($this.Function)
+        {
+            return $this.Function.ResolveParameter($name)
+        }
+        else
+        {
+            throw [InvalidOperationException]::new("Cannot resolve parameter for unresolved command '$($this.Name)'.")
+        }
     }
 
     [string] ToString()
     {
-        return $_.Function.ToString()
+        if ($this.Function)
+        {
+            return $_.Function.ToString()
+        }
+        else
+        {
+            return $this.Name
+        }
     }
 }
