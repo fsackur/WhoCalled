@@ -94,7 +94,7 @@ function Find-FunctionCall
 
         if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
-            $Function = $CallingFunction.Function
+            $Function = $CallingFunction.Command
         }
         else
         {

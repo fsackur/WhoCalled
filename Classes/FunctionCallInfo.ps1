@@ -18,7 +18,7 @@ class IFunctionCallInfo
     [int]$Depth
 
     # Inner object; we'll delegate calls to this
-    hidden [Management.Automation.FunctionInfo]$Function
+    hidden [Management.Automation.CommandInfo]$Command
 
 
     IFunctionCallInfo()
@@ -55,7 +55,7 @@ class IFunctionCallInfo
         )
 
         $InheritedProperties | ForEach-Object {
-            Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Function.$_"))
+            Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Command.$_"))
         }
     }
 
@@ -68,27 +68,27 @@ class IFunctionCallInfo
 
 class FunctionCallInfo : IFunctionCallInfo
 {
-    FunctionCallInfo([Management.Automation.FunctionInfo]$Function) : base()
+    FunctionCallInfo([Management.Automation.CommandInfo]$Command) : base()
     {
-        $this.Function = $Function
-        $this.Name = $Function.Name
-        $this.Source = $Function.Source
-        $this.Module = $Function.Module
+        $this.Command = $Command
+        $this.Name = $Command.Name
+        $this.Source = $Command.Source
+        $this.Module = $Command.Module
     }
 
     [bool] Equals([object]$obj)
     {
-        return $this.Function.Equals($obj)
+        return $this.Command.Equals($obj)
     }
 
     [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
     {
-        return $this.Function.ResolveParameter($name)
+        return $this.Command.ResolveParameter($name)
     }
 
     [string] ToString()
     {
-        return $_.Function.ToString()
+        return $_.Command.ToString()
     }
 }
 
