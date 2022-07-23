@@ -1,6 +1,6 @@
 @{
     Description          = 'Build a tree of function calls.'
-    ModuleVersion        = '0.0.1'
+    ModuleVersion        = '1.0.0'
     HelpInfoURI          = 'https://pages.github.com/fsackur/FindFunctionCalls'
 
     GUID                 = '7b5c6e30-13b1-4ff8-a3ca-f1151b346066'
@@ -13,7 +13,11 @@
 
     AliasesToExport      = @()
     FunctionsToExport    = @(
-        'Find-FunctionCalls'
+        'Find-FunctionCall'
+    )
+
+    FormatsToProcess     = @(
+        'FindFunctionCalls.Format.ps1xml'
     )
 
     PrivateData          = @{

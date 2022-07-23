@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<Configuration>
+  <ViewDefinitions>
+
+    <View>
+        <Name>FunctionCallInfo</Name>
+        <ViewSelectedBy>
+          <TypeName>FunctionCallInfo</TypeName>
+        </ViewSelectedBy>
+        <TableControl>
+
+          <TableHeaders>
+            <TableColumnHeader>
+              <Label>CommandType</Label>
+            </TableColumnHeader>
+            <TableColumnHeader>
+              <Label>Name</Label>
+            </TableColumnHeader>
+            <TableColumnHeader>
+              <Label>Version</Label>
+            </TableColumnHeader>
+            <TableColumnHeader>
+              <Label>Source</Label>
+            </TableColumnHeader>
+          </TableHeaders>
+
+          <TableRowEntries>
+            <TableRowEntry>
+              <TableColumnItems>
+                <TableColumnItem>
+                  <ScriptBlock>
+                      $_.Function.CommandType
+                  </ScriptBlock>
+                </TableColumnItem>
+                <TableColumnItem>
+                  <ScriptBlock>
+                      ('  ' * $_.Depth) + $_.Name
+                  </ScriptBlock>
+                </TableColumnItem>
+                <TableColumnItem>
+                  <PropertyName>Version</PropertyName>
+                </TableColumnItem>
+                <TableColumnItem>
+                  <PropertyName>Source</PropertyName>
+                </TableColumnItem>
+              </TableColumnItems>
+            </TableRowEntry>
+          </TableRowEntries>
+
+        </TableControl>
+      </View>
+
+  </ViewDefinitions>
+</Configuration>
