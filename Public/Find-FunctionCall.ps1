@@ -35,22 +35,22 @@ function Find-FunctionCall
 
         CommandType Name                                          Version Source
         ----------- ----                                          ------- ------
-        Function    Install-Module                                        PowerShellGet
-        Function      Get-ProviderName                                    PowerShellGet
-        Function      Get-PSRepository                                    PowerShellGet
-        Function        New-ModuleSourceFromPackageSource                 PowerShellGet
-        Function      Install-NuGetClientBinaries                         PowerShellGet
-        Function        Get-ParametersHashtable                           PowerShellGet
-        Function        Test-RunningAsElevated                            PowerShellGet
-        Function        ThrowError                                        PowerShellGet
-        Function      New-PSGetItemInfo                                   PowerShellGet
-        Function        Get-EntityName                                    PowerShellGet
-        Function        Get-First                                         PowerShellGet
-        Function        Get-SourceLocation                                PowerShellGet
-        Function          Set-ModuleSourcesVariable                       PowerShellGet
-        Function            DeSerialize-PSObject                          PowerShellGet
-        Function            Get-PublishLocation                           PowerShellGet
-        Function            Get-ScriptSourceLocation                      PowerShellGet
+        Function    Install-Module                                2.2.5   PowerShellGet
+        Function      Get-ProviderName                            2.2.5   PowerShellGet
+        Function      Get-PSRepository                            2.2.5   PowerShellGet
+        Function        New-ModuleSourceFromPackageSource         2.2.5   PowerShellGet
+        Function      Install-NuGetClientBinaries                 2.2.5   PowerShellGet
+        Function        Get-ParametersHashtable                   2.2.5   PowerShellGet
+        Function        Test-RunningAsElevated                    2.2.5   PowerShellGet
+        Function        ThrowError                                2.2.5   PowerShellGet
+        Function      New-PSGetItemInfo                           2.2.5   PowerShellGet
+        Function        Get-EntityName                            2.2.5   PowerShellGet
+        Function        Get-First                                 2.2.5   PowerShellGet
+        Function        Get-SourceLocation                        2.2.5   PowerShellGet
+        Function          Set-ModuleSourcesVariable               2.2.5   PowerShellGet
+        Function            DeSerialize-PSObject                  2.2.5   PowerShellGet
+        Function            Get-PublishLocation                   2.2.5   PowerShellGet
+        Function            Get-ScriptSourceLocation              2.2.5   PowerShellGet
 
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
     #>
