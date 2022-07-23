@@ -6,7 +6,7 @@
     <View>
         <Name>FunctionCallInfo</Name>
         <ViewSelectedBy>
-          <TypeName>FunctionCallInfo</TypeName>
+          <TypeName>IFunctionCallInfo</TypeName>
         </ViewSelectedBy>
         <TableControl>
 
@@ -29,9 +29,7 @@
             <TableRowEntry>
               <TableColumnItems>
                 <TableColumnItem>
-                  <ScriptBlock>
-                      $_.Function.CommandType
-                  </ScriptBlock>
+                  <PropertyName>CommandType</PropertyName>
                 </TableColumnItem>
                 <TableColumnItem>
                   <ScriptBlock>

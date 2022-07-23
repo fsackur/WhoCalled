@@ -33,24 +33,24 @@ function Find-FunctionCall
         .EXAMPLE
         'Install-Module' | Get-Command | Find-FunctionCall
 
-        CommandType Name                                          Version Source
-        ----------- ----                                          ------- ------
-        Function    Install-Module                                2.2.5   PowerShellGet
-        Function      Get-ProviderName                            2.2.5   PowerShellGet
-        Function      Get-PSRepository                            2.2.5   PowerShellGet
-        Function        New-ModuleSourceFromPackageSource         2.2.5   PowerShellGet
-        Function      Install-NuGetClientBinaries                 2.2.5   PowerShellGet
-        Function        Get-ParametersHashtable                   2.2.5   PowerShellGet
-        Function        Test-RunningAsElevated                    2.2.5   PowerShellGet
-        Function        ThrowError                                2.2.5   PowerShellGet
-        Function      New-PSGetItemInfo                           2.2.5   PowerShellGet
-        Function        Get-EntityName                            2.2.5   PowerShellGet
-        Function        Get-First                                 2.2.5   PowerShellGet
-        Function        Get-SourceLocation                        2.2.5   PowerShellGet
-        Function          Set-ModuleSourcesVariable               2.2.5   PowerShellGet
-        Function            DeSerialize-PSObject                  2.2.5   PowerShellGet
-        Function            Get-PublishLocation                   2.2.5   PowerShellGet
-        Function            Get-ScriptSourceLocation              2.2.5   PowerShellGet
+        CommandType Name                                          Version   Source
+        ----------- ----                                          -------   ------
+        Function    Install-Module                                2.2.5     PowerShellGet
+        Cmdlet        Get-Member                                  7.0.0.0   Microsoft.PowerShell.Utility
+        Function      Get-ProviderName                            2.2.5     PowerShellGet
+        Cmdlet          Get-Member                                7.0.0.0   Microsoft.PowerShell.Utility
+        Function      Get-PSRepository                            2.2.5     PowerShellGet
+        Cmdlet          ForEach-Object                            7.2.5.500 Microsoft.PowerShell.Core
+        Function        New-ModuleSourceFromPackageSource         2.2.5     PowerShellGet
+        Cmdlet            ForEach-Object                          7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet            New-Object                              7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet            Write-Output                            7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet          Get-PackageSource                         1.4.7     PackageManagement
+        Function      Install-NuGetClientBinaries                 2.2.5     PowerShellGet
+        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
+        Function        Get-ParametersHashtable                   2.2.5     PowerShellGet
+        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet          Where-Object                              7.2.5.500 Microsoft.PowerShell.Core
 
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
     #>
@@ -69,7 +69,7 @@ function Find-FunctionCall
         [int]$Depth = 4,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
-        [FunctionCallInfo]$CallingFunction,
+        [IFunctionCallInfo]$CallingFunction,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
@@ -94,7 +94,7 @@ function Find-FunctionCall
 
         if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
-            $Function = $CallingFunction.Function
+            $Function = $CallingFunction.Command
         }
         else
         {
@@ -128,29 +128,58 @@ function Find-FunctionCall
         }
 
 
-        $CalledCommands = if ($Function.Module)
+        $Resolver = {
+            param
+            (
+                [string[]]$CommandNames,
+                [string]$ModuleName
+            )
+
+            foreach ($CommandName in $CommandNames)
+            {
+                try
+                {
+                    [FunctionCallInfo](Get-Command $CommandName -ErrorAction Stop)
+                }
+                catch [Management.Automation.CommandNotFoundException]
+                {
+                    [UnresolvedFunctionCallInfo]$CommandName
+
+                    $_.ErrorDetails = "Command resolution failed for command '$CommandName'$(if ($ModuleName) {" in module '$ModuleName'"})."
+                    Write-Error -ErrorRecord $_
+                }
+                catch
+                {
+                    Write-Error -ErrorRecord $_
+                }
+            }
+        }
+
+        [IFunctionCallInfo[]]$CalledCommands = if ($Function.Module)
         {
-            & $Function.Module {$args | Get-Command} $CalledCommandNames
+            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name))
         }
         else
         {
-            Get-Command $CalledCommandNames
+            & $Resolver $CalledCommandNames
         }
-        [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
+        # [FunctionCallInfo[]]$CalledFunctions = $CalledCommands | Where-Object CommandType -eq 'Function'
 
-        if (-not $CalledFunctions)
+        if (-not $CalledCommands)
         {
             return
         }
 
 
-        $CalledFunctions | ForEach-Object {
+        $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
 
             # Recurse
-            [FunctionCallInfo[]]$CallsOfCalls = $_ |
-                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions
+            [IFunctionCallInfo[]]$CallsOfCalls = $_ |
+                Where-Object CommandType -eq 'Function' |
+                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions |
+                Where-Object Name
 
             $_ | Write-Output
 
