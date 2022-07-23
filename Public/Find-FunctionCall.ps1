@@ -130,7 +130,7 @@ function Find-FunctionCall
 
         $CalledCommands = if ($Function.Module)
         {
-            & $Function.Module {$args | Get-Command} $CalledCommandNames
+            $Function.Module.Invoke({$args | Get-Command}, @(,$CalledCommandNames))
         }
         else
         {
