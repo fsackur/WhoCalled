@@ -1,4 +1,4 @@
-class FunctionCallInfo
+class IFunctionCallInfo
 {
     <#
         .SYNOPSIS
@@ -13,100 +13,90 @@ class FunctionCallInfo
     [psmoduleinfo]$Module
 
     # This class is a tree node
-    [FunctionCallInfo]$CalledBy
-    [System.Collections.Generic.IList[FunctionCallInfo]]$Calls
+    [IFunctionCallInfo]$CalledBy
+    [System.Collections.Generic.IList[IFunctionCallInfo]]$Calls
     [int]$Depth
 
     # Inner object; we'll delegate calls to this
     hidden [Management.Automation.FunctionInfo]$Function
-    hidden static [string[]]$_InheritedProperties = (
-        'CmdletBinding',
-        'CommandType',
-        'DefaultParameterSet',
-        'Definition',
-        'Description',
-        'HelpFile',
-        # 'Module',
-        'ModuleName',
-        # 'Name',
-        'Noun',
-        'Options',
-        'OutputType',
-        'Parameters',
-        'ParameterSets',
-        'RemotingCapability',
-        'ScriptBlock',
-        # 'Source',
-        'Verb',
-        'Version',
-        'Visibility',
-        'HelpUri'
-    )
 
 
-    FunctionCallInfo ([string]$Name)
+    IFunctionCallInfo()
     {
-        $this.Name = $Name
-        $this.Initialise()
-    }
-
-    FunctionCallInfo ([Management.Automation.FunctionInfo]$Function)
-    {
-        $this.Function = $Function
-        $this.Name = $Function.Name
-        $this.Source = $Function.Source
-        $this.Module = $Function.Module
-        $this.Initialise()
-    }
-
-    [void] Initialise()
-    {
-        $this.Calls = [Collections.Generic.List[FunctionCallInfo]]::new()
-
-        [FunctionCallInfo]::_InheritedProperties | ForEach-Object {
-            Add-Member ScriptProperty -InputObject $this -Name $_ -Value (
-                [scriptblock]::Create("`$this.Function.$_")
-            ) -SecondValue (
-                [scriptblock]::Create("`$this.Function.$_ = `$args[0]")
-            )
-        }
-    }
-
-    [bool] Equals([object]$obj)
-    {
-        if ($this.Function)
+        if (-not (Get-PSCallStack).FunctionName -match '^(Unresolved)?FunctionCallInfo$')
         {
-            return $this.Function.Equals($obj)
+            throw [Management.Automation.MethodException]::new("Cannot instantiate interface 'IFunctionCallInfo'.")
         }
-        else
-        {
-            return $this.Name -eq $Obj.Name -and
-            $this.Source -eq $Obj.Source -and
-            $this.Module -eq $Obj.Module
+
+        $this.Calls = [Collections.Generic.List[IFunctionCallInfo]]::new()
+
+        $InheritedProperties = (
+            'CmdletBinding',
+            'CommandType',
+            'DefaultParameterSet',
+            'Definition',
+            'Description',
+            'HelpFile',
+            # 'Module',
+            'ModuleName',
+            # 'Name',
+            'Noun',
+            'Options',
+            'OutputType',
+            'Parameters',
+            'ParameterSets',
+            'RemotingCapability',
+            'ScriptBlock',
+            # 'Source',
+            'Verb',
+            'Version',
+            'Visibility',
+            'HelpUri'
+        )
+
+        $InheritedProperties | ForEach-Object {
+            Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Function.$_"))
         }
     }
 
     [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
     {
-        if ($this.Function)
-        {
-            return $this.Function.ResolveParameter($name)
-        }
-        else
-        {
-            throw [InvalidOperationException]::new("Cannot resolve parameter for unresolved command '$($this.Name)'.")
-        }
+        throw [InvalidOperationException]::new("Cannot resolve parameter for unresolved comand '$Name'.")
+    }
+}
+
+
+class FunctionCallInfo : IFunctionCallInfo
+{
+    FunctionCallInfo([Management.Automation.FunctionInfo]$Function) : base()
+    {
+        $this.Function = $Function
+        $this.Name = $Function.Name
+        $this.Source = $Function.Source
+        $this.Module = $Function.Module
+    }
+
+    [bool] Equals([object]$obj)
+    {
+        return $this.Function.Equals($obj)
+    }
+
+    [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
+    {
+        return $this.Function.ResolveParameter($name)
     }
 
     [string] ToString()
     {
-        if ($this.Function)
-        {
-            return $_.Function.ToString()
-        }
-        else
-        {
-            return $this.Name
-        }
+        return $_.Function.ToString()
+    }
+}
+
+
+class UnresolvedFunctionCallInfo : IFunctionCallInfo
+{
+    UnresolvedFunctionCallInfo([string]$Name) : base()
+    {
+        $this.Name = $Name
     }
 }

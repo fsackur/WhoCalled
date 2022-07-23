@@ -69,7 +69,7 @@ function Find-FunctionCall
         [int]$Depth = 4,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
-        [FunctionCallInfo]$CallingFunction,
+        [IFunctionCallInfo]$CallingFunction,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
