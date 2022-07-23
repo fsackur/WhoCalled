@@ -10,6 +10,9 @@ function Find-FunctionCall
 
         This command takes a function and builds a tree of functions called by that function.
 
+        .PARAMETER Name
+        Provide the name of a function to analyse.
+
         .PARAMETER Function
         Provide a function object as input. This will be the output of Get-Command.
 
@@ -53,10 +56,13 @@ function Find-FunctionCall
     #>
 
     [OutputType([FunctionCallInfo[]])]
-    [CmdletBinding(DefaultParameterSetName = 'Default')]
+    [CmdletBinding(DefaultParameterSetName = 'FromFunction')]
     param
     (
-        [Parameter(ParameterSetName = 'Default', Mandatory, ValueFromPipeline)]
+        [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline)]
+        [string]$Name,
+
+        [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline)]
         [Management.Automation.FunctionInfo]$Function,
 
         [Parameter()]
@@ -81,15 +87,19 @@ function Find-FunctionCall
         }
 
 
-        if ($PSCmdlet.ParameterSetName -eq 'Default')
+        if ($PSCmdlet.ParameterSetName -eq 'ByName')
         {
-            $CallingFunction = [FunctionCallInfo]$Function
+            $Function = Get-Command $Name -CommandType Function -ErrorAction Stop
         }
-        else
+
+        if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
             $Function = $CallingFunction.Function
         }
-
+        else
+        {
+            $CallingFunction = [FunctionCallInfo]$Function
+        }
 
         # Returns false if already in set
         if (-not $_SeenFunctions.Add($Function))
