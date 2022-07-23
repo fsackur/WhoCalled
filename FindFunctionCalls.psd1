@@ -16,6 +16,10 @@
         'Find-FunctionCall'
     )
 
+    FormatsToProcess     = @(
+        'FindFunctionCalls.Format.ps1xml'
+    )
+
     PrivateData          = @{
         PSData = @{
             LicenseUri = 'https://raw.githubusercontent.com/fsackur/FindFunctionCalls/main/LICENSE'
