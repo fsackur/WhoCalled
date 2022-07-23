@@ -13,7 +13,7 @@
 
     AliasesToExport      = @()
     FunctionsToExport    = @(
-        'Find-FunctionCalls'
+        'Find-FunctionCall'
     )
 
     PrivateData          = @{
