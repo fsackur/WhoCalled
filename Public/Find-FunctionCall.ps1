@@ -1,5 +1,57 @@
 function Find-FunctionCall
 {
+    <#
+        .SYNOPSIS
+        For a given function, find what functions it calls.
+
+        .DESCRIPTION
+        For the purposes of working out dependencies, it may be good to know what a function depends
+        on at the function scale.
+
+        This command takes a function and builds a tree of functions called by that function.
+
+        .PARAMETER Function
+        Provide a function object as input. This will be the output of Get-Command.
+
+        .PARAMETER Depth
+        Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
+
+        .INPUTS
+
+        [System.Management.Automation.FunctionInfo]
+
+        .OUTPUTS
+
+        [FunctionCallInfo]
+
+        This command outputs an object similar to System.Management.Automation.FunctionInfo. Note
+        that this is not a child class of FunctionInfo.
+
+        .EXAMPLE
+        'Install-Module' | Get-Command | Find-FunctionCall
+
+        CommandType Name                                          Version Source
+        ----------- ----                                          ------- ------
+        Function    Install-Module                                        PowerShellGet
+        Function      Get-ProviderName                                    PowerShellGet
+        Function      Get-PSRepository                                    PowerShellGet
+        Function        New-ModuleSourceFromPackageSource                 PowerShellGet
+        Function      Install-NuGetClientBinaries                         PowerShellGet
+        Function        Get-ParametersHashtable                           PowerShellGet
+        Function        Test-RunningAsElevated                            PowerShellGet
+        Function        ThrowError                                        PowerShellGet
+        Function      New-PSGetItemInfo                                   PowerShellGet
+        Function        Get-EntityName                                    PowerShellGet
+        Function        Get-First                                         PowerShellGet
+        Function        Get-SourceLocation                                PowerShellGet
+        Function          Set-ModuleSourcesVariable                       PowerShellGet
+        Function            DeSerialize-PSObject                          PowerShellGet
+        Function            Get-PublishLocation                           PowerShellGet
+        Function            Get-ScriptSourceLocation                      PowerShellGet
+
+        For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
+    #>
+
     [OutputType([FunctionCallInfo[]])]
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     param
