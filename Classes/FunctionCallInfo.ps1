@@ -93,7 +93,7 @@ class FunctionCallInfo : IFunctionCallInfo
 
     [string] ToString()
     {
-        return $_.Command.ToString()
+        return $this.Command.ToString()
     }
 }
 
