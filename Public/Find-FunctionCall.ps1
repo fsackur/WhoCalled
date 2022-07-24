@@ -116,8 +116,6 @@ function Find-FunctionCall
             $CallingFunction
         }
 
-        $_CallDepth++
-
 
         #region Parse
         $Def = "function $($Function.Name) {$($Function.Definition)}"
@@ -182,6 +180,14 @@ function Find-FunctionCall
         #endregion Resolve commands
 
         #region Recurse
+        $RecurseParams = [hashtable]$PSBoundParameters
+        $RecurseParams.Remove('Name')
+        $RecurseParams.Remove('Function')
+        $RecurseParams.Remove('CallingFunction')
+        $RecurseParams.Depth = $Depth
+        $RecurseParams._CallDepth = ++$_CallDepth
+        $RecurseParams._SeenFunctions = $_SeenFunctions
+
         $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
@@ -189,7 +195,7 @@ function Find-FunctionCall
             # Recurse
             [IFunctionCallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
-                Find-FunctionCall -Depth $Depth -ResolveAlias:$ResolveAlias -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions  |
+                Find-FunctionCall @RecurseParams |
                 Where-Object Name
 
             $_ | Write-Output
