@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.3.0
+
+- Add -ResolveAlias parameter
+
 ## 1.2.0
 
 - Show all command types
