@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.4.1
+
+- Fix FunctionCallInfo.Equals
+
 ## 1.4.0
 
 - Add `-Add` parameter
