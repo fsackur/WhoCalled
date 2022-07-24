@@ -231,21 +231,15 @@ function Find-FunctionCall
         $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
+            $CallingFunction.Calls.Add($_)
 
-            # Recurse
             [IFunctionCallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
                 Find-FunctionCall @RecurseParams |
                 Where-Object Name
 
             $_ | Write-Output
-
-            if ($CallsOfCalls)
-            {
-                $_.Calls.AddRange($CallsOfCalls)
-
-                $CallsOfCalls | Write-Output
-            }
+            $CallsOfCalls | Write-Output
         }
         #endregion Recurse
     }

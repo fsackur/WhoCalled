@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.4.4
+
+- Fix calls not getting added to top-level caller
+
 ## 1.4.3
 
 - Fix CallInfo.ToString
