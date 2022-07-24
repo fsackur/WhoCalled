@@ -22,6 +22,9 @@ function Find-FunctionCall
         .PARAMETER ResolveAlias
         Specifies to resolve aliases to the aliased command.
 
+        .PARAMETER All
+        Specifies to return all commands. By default, built-in modules are excluded.
+
         .INPUTS
 
         [System.Management.Automation.FunctionInfo]
@@ -34,28 +37,57 @@ function Find-FunctionCall
         that this is not a child class of FunctionInfo.
 
         .EXAMPLE
-        'Install-Module' | Get-Command | Find-FunctionCall
+        Find-FunctionCall Install-Module
 
-        CommandType Name                                          Version   Source
-        ----------- ----                                          -------   ------
-        Function    Install-Module                                2.2.5     PowerShellGet
-        Cmdlet        Get-Member                                  7.0.0.0   Microsoft.PowerShell.Utility
-        Function      Get-ProviderName                            2.2.5     PowerShellGet
-        Cmdlet          Get-Member                                7.0.0.0   Microsoft.PowerShell.Utility
-        Function      Get-PSRepository                            2.2.5     PowerShellGet
-        Cmdlet          ForEach-Object                            7.2.5.500 Microsoft.PowerShell.Core
-        Function        New-ModuleSourceFromPackageSource         2.2.5     PowerShellGet
-        Cmdlet            ForEach-Object                          7.2.5.500 Microsoft.PowerShell.Core
-        Cmdlet            New-Object                              7.0.0.0   Microsoft.PowerShell.Utility
-        Cmdlet            Write-Output                            7.0.0.0   Microsoft.PowerShell.Utility
-        Cmdlet          Get-PackageSource                         1.4.7     PackageManagement
-        Function      Install-NuGetClientBinaries                 2.2.5     PowerShellGet
-        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
-        Function        Get-ParametersHashtable                   2.2.5     PowerShellGet
-        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
-        Cmdlet          Where-Object                              7.2.5.500 Microsoft.PowerShell.Core
+        CommandType Name                                          Version Source
+        ----------- ----                                          ------- ------
+        Function    Install-Module                                2.2.5   PowerShellGet
+        Function      Get-ProviderName                            2.2.5   PowerShellGet
+        Function      Get-PSRepository                            2.2.5   PowerShellGet
+        Function        New-ModuleSourceFromPackageSource         2.2.5   PowerShellGet
+        Cmdlet          Get-PackageSource                         1.4.7   PackageManagement
+        Function      Install-NuGetClientBinaries                 2.2.5   PowerShellGet
+        Function        Get-ParametersHashtable                   2.2.5   PowerShellGet
+        Cmdlet          Get-PackageProvider                       1.4.7   PackageManagement
+        Cmdlet          Import-PackageProvider                    1.4.7   PackageManagement
+        Cmdlet          Install-PackageProvider                   1.4.7   PackageManagement
+        Function        Test-RunningAsElevated                    2.2.5   PowerShellGet
+        Function        ThrowError                                2.2.5   PowerShellGet
+        Function      New-PSGetItemInfo                           2.2.5   PowerShellGet
+        Function        Get-EntityName                            2.2.5   PowerShellGet
+        Function        Get-First                                 2.2.5   PowerShellGet
+        Function        Get-SourceLocation                        2.2.5   PowerShellGet
 
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
+
+        .EXAMPLE
+        Find-FunctionCall Import-Plugz -Depth 2 -ResolveAlias -All
+
+        WARNING: Resulting output is truncated as call tree has exceeded the set depth of 2.
+        CommandType Name                     Version   Source
+        ----------- ----                     -------   ------
+        Function    Import-Plugz             0.2.0     Plugz
+        Cmdlet        Export-ModuleMember    7.2.5.500 Microsoft.PowerShell.Core
+        Function      Get-PlugzConfig        0.2.0     Plugz
+        Cmdlet          Add-Member           7.0.0.0   Microsoft.PowerShell.Utility
+        Function        Import-Configuration 1.5.1     Configuration
+        Cmdlet        Join-Path              7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        New-Module             7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Select-Object          7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Set-Alias              7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Set-Item               7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        Set-Variable           7.0.0.0   Microsoft.PowerShell.Utility
+        Function      Test-CalledFromProfile 0.2.0     Plugz
+        Cmdlet          Get-PSCallStack      7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet          Select-Object        7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet          Where-Object         7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Test-Path              7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        Where-Object           7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Write-Error            7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Write-Verbose          7.0.0.0   Microsoft.PowerShell.Utility
+
+        Find calls made by the 'Import-Plugz' command. Depth is limited to 2. Built-in commands are
+        included. Aliases are resolved to the resolved commands.
     #>
 
     [OutputType([FunctionCallInfo[]])]
@@ -72,6 +104,8 @@ function Find-FunctionCall
 
         [switch]$ResolveAlias,
 
+        [switch]$All,
+
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
         [IFunctionCallInfo]$CallingFunction,
 
@@ -79,7 +113,7 @@ function Find-FunctionCall
         [int]$_CallDepth = 0,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
+        [Collections.Generic.ISet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
     )
 
     process
@@ -116,9 +150,8 @@ function Find-FunctionCall
             $CallingFunction
         }
 
-        $_CallDepth++
 
-
+        #region Parse
         $Def = "function $($Function.Name) {$($Function.Definition)}"
         $Tokens = @()
         [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
@@ -130,8 +163,9 @@ function Find-FunctionCall
         {
             return
         }
+        #endregion Parse
 
-
+        #region Resolve commands
         $Resolver = {
             param ([string[]]$CommandNames, [string]$ModuleName, [switch]$ResolveAlias)
 
@@ -173,11 +207,26 @@ function Find-FunctionCall
             & $Resolver $CalledCommandNames '' $ResolveAlias
         }
 
+
+        if (-not $All)
+        {
+            $CalledCommands = $CalledCommands | Where-Object Source -notmatch '^Microsoft.PowerShell'
+        }
+
         if (-not $CalledCommands)
         {
             return
         }
+        #endregion Resolve commands
 
+        #region Recurse
+        $RecurseParams = [hashtable]$PSBoundParameters
+        $RecurseParams.Remove('Name')
+        $RecurseParams.Remove('Function')
+        $RecurseParams.Remove('CallingFunction')
+        $RecurseParams.Depth = $Depth
+        $RecurseParams._CallDepth = ++$_CallDepth
+        $RecurseParams._SeenFunctions = $_SeenFunctions
 
         $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
@@ -186,7 +235,7 @@ function Find-FunctionCall
             # Recurse
             [IFunctionCallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
-                Find-FunctionCall -Depth $Depth -ResolveAlias:$ResolveAlias -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions  |
+                Find-FunctionCall @RecurseParams |
                 Where-Object Name
 
             $_ | Write-Output
@@ -198,5 +247,6 @@ function Find-FunctionCall
                 $CallsOfCalls | Write-Output
             }
         }
+        #endregion Recurse
     }
 }

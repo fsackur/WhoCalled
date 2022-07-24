@@ -1,8 +1,14 @@
 # FindFunctionCalls
 
+## 1.4.0
+
+- Add `-Add` parameter
+- Built-in commands are excluded by default
+    - Specifically, commands from modules beginning with `Microsoft.PowerShell`
+
 ## 1.3.0
 
-- Add -ResolveAlias parameter
+- Add `-ResolveAlias` parameter
 
 ## 1.2.0
 
