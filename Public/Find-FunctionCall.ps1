@@ -19,6 +19,9 @@ function Find-FunctionCall
         .PARAMETER Depth
         Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
 
+        .PARAMETER ResolveAlias
+        Specifies to resolve aliases to the aliased command.
+
         .INPUTS
 
         [System.Management.Automation.FunctionInfo]
@@ -65,8 +68,9 @@ function Find-FunctionCall
         [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline, Position = 0)]
         [Management.Automation.FunctionInfo]$Function,
 
-        [Parameter()]
         [int]$Depth = 4,
+
+        [switch]$ResolveAlias,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
         [IFunctionCallInfo]$CallingFunction,
@@ -129,17 +133,22 @@ function Find-FunctionCall
 
 
         $Resolver = {
-            param
-            (
-                [string[]]$CommandNames,
-                [string]$ModuleName
-            )
+            param ([string[]]$CommandNames, [string]$ModuleName, [switch]$ResolveAlias)
 
             foreach ($CommandName in $CommandNames)
             {
                 try
                 {
-                    [FunctionCallInfo](Get-Command $CommandName -ErrorAction Stop)
+                    $ResolvedCommand = Get-Command $CommandName -ErrorAction Stop
+
+                    if ($ResolveAlias -and $ResolvedCommand.CommandType -eq 'Alias')
+                    {
+                        [FunctionCallInfo]$ResolvedCommand.ResolvedCommand
+                    }
+                    else
+                    {
+                        [FunctionCallInfo]$ResolvedCommand
+                    }
                 }
                 catch [Management.Automation.CommandNotFoundException]
                 {
@@ -157,11 +166,11 @@ function Find-FunctionCall
 
         [IFunctionCallInfo[]]$CalledCommands = if ($Function.Module)
         {
-            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name))
+            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name, $ResolveAlias))
         }
         else
         {
-            & $Resolver $CalledCommandNames
+            & $Resolver $CalledCommandNames '' $ResolveAlias
         }
 
         if (-not $CalledCommands)
@@ -177,7 +186,7 @@ function Find-FunctionCall
             # Recurse
             [IFunctionCallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
-                Find-FunctionCall -Depth $Depth -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions |
+                Find-FunctionCall -Depth $Depth -ResolveAlias:$ResolveAlias -_CallDepth $_CallDepth -_SeenFunctions $_SeenFunctions  |
                 Where-Object Name
 
             $_ | Write-Output
