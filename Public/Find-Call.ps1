@@ -1,4 +1,4 @@
-function Find-FunctionCall
+function Find-Call
 {
     <#
         .SYNOPSIS
@@ -37,7 +37,7 @@ function Find-FunctionCall
         that this is not a child class of FunctionInfo.
 
         .EXAMPLE
-        Find-FunctionCall Install-Module
+        Find-Call Install-Module
 
         CommandType Name                                          Version Source
         ----------- ----                                          ------- ------
@@ -61,7 +61,7 @@ function Find-FunctionCall
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
 
         .EXAMPLE
-        Find-FunctionCall Import-Plugz -Depth 2 -ResolveAlias -All
+        Find-Call Import-Plugz -Depth 2 -ResolveAlias -All
 
         WARNING: Resulting output is truncated as call tree has exceeded the set depth of 2.
         CommandType Name                     Version   Source
@@ -235,7 +235,7 @@ function Find-FunctionCall
 
             [CallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
-                Find-FunctionCall @RecurseParams |
+                Find-Call @RecurseParams |
                 Where-Object Name
 
             $_ | Write-Output
