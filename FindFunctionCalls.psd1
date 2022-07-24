@@ -13,7 +13,8 @@
 
     AliasesToExport      = @()
     FunctionsToExport    = @(
-        'Find-Call'
+        'Find-Call',
+        'Find-Caller'
     )
 
     FormatsToProcess     = @(
