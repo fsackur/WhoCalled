@@ -79,7 +79,7 @@ function Find-FunctionCall
         [int]$_CallDepth = 0,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
+        [Collections.Generic.ISet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
     )
 
     process
