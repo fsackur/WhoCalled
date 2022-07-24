@@ -22,6 +22,9 @@ function Find-FunctionCall
         .PARAMETER ResolveAlias
         Specifies to resolve aliases to the aliased command.
 
+        .PARAMETER All
+        Specifies to return all commands. By default, built-in modules are excluded.
+
         .INPUTS
 
         [System.Management.Automation.FunctionInfo]
@@ -71,6 +74,8 @@ function Find-FunctionCall
         [int]$Depth = 4,
 
         [switch]$ResolveAlias,
+
+        [switch]$All,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
         [IFunctionCallInfo]$CallingFunction,
@@ -171,6 +176,12 @@ function Find-FunctionCall
         else
         {
             & $Resolver $CalledCommandNames '' $ResolveAlias
+        }
+
+
+        if (-not $All)
+        {
+            $CalledCommands = $CalledCommands | Where-Object Source -notmatch '^Microsoft.PowerShell'
         }
 
         if (-not $CalledCommands)
