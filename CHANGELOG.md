@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.4.3
+
+- Fix CallInfo.ToString
+
 ## 1.4.2
 
 - Implement FunctionCallInfo.GetHashCode
