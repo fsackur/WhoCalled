@@ -78,7 +78,7 @@ class FunctionCallInfo : IFunctionCallInfo
 
     [bool] Equals([object]$obj)
     {
-        return $this.Command.Equals($obj)
+        return $this.Command.Equals($obj.Command)
     }
 
     [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
