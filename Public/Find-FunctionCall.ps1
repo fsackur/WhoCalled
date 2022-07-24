@@ -37,28 +37,57 @@ function Find-FunctionCall
         that this is not a child class of FunctionInfo.
 
         .EXAMPLE
-        'Install-Module' | Get-Command | Find-FunctionCall
+        Find-FunctionCall Install-Module
 
-        CommandType Name                                          Version   Source
-        ----------- ----                                          -------   ------
-        Function    Install-Module                                2.2.5     PowerShellGet
-        Cmdlet        Get-Member                                  7.0.0.0   Microsoft.PowerShell.Utility
-        Function      Get-ProviderName                            2.2.5     PowerShellGet
-        Cmdlet          Get-Member                                7.0.0.0   Microsoft.PowerShell.Utility
-        Function      Get-PSRepository                            2.2.5     PowerShellGet
-        Cmdlet          ForEach-Object                            7.2.5.500 Microsoft.PowerShell.Core
-        Function        New-ModuleSourceFromPackageSource         2.2.5     PowerShellGet
-        Cmdlet            ForEach-Object                          7.2.5.500 Microsoft.PowerShell.Core
-        Cmdlet            New-Object                              7.0.0.0   Microsoft.PowerShell.Utility
-        Cmdlet            Write-Output                            7.0.0.0   Microsoft.PowerShell.Utility
-        Cmdlet          Get-PackageSource                         1.4.7     PackageManagement
-        Function      Install-NuGetClientBinaries                 2.2.5     PowerShellGet
-        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
-        Function        Get-ParametersHashtable                   2.2.5     PowerShellGet
-        Cmdlet          Get-Command                               7.2.5.500 Microsoft.PowerShell.Core
-        Cmdlet          Where-Object                              7.2.5.500 Microsoft.PowerShell.Core
+        CommandType Name                                          Version Source
+        ----------- ----                                          ------- ------
+        Function    Install-Module                                2.2.5   PowerShellGet
+        Function      Get-ProviderName                            2.2.5   PowerShellGet
+        Function      Get-PSRepository                            2.2.5   PowerShellGet
+        Function        New-ModuleSourceFromPackageSource         2.2.5   PowerShellGet
+        Cmdlet          Get-PackageSource                         1.4.7   PackageManagement
+        Function      Install-NuGetClientBinaries                 2.2.5   PowerShellGet
+        Function        Get-ParametersHashtable                   2.2.5   PowerShellGet
+        Cmdlet          Get-PackageProvider                       1.4.7   PackageManagement
+        Cmdlet          Import-PackageProvider                    1.4.7   PackageManagement
+        Cmdlet          Install-PackageProvider                   1.4.7   PackageManagement
+        Function        Test-RunningAsElevated                    2.2.5   PowerShellGet
+        Function        ThrowError                                2.2.5   PowerShellGet
+        Function      New-PSGetItemInfo                           2.2.5   PowerShellGet
+        Function        Get-EntityName                            2.2.5   PowerShellGet
+        Function        Get-First                                 2.2.5   PowerShellGet
+        Function        Get-SourceLocation                        2.2.5   PowerShellGet
 
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
+
+        .EXAMPLE
+        Find-FunctionCall Import-Plugz -Depth 2 -ResolveAlias -All
+
+        WARNING: Resulting output is truncated as call tree has exceeded the set depth of 2.
+        CommandType Name                     Version   Source
+        ----------- ----                     -------   ------
+        Function    Import-Plugz             0.2.0     Plugz
+        Cmdlet        Export-ModuleMember    7.2.5.500 Microsoft.PowerShell.Core
+        Function      Get-PlugzConfig        0.2.0     Plugz
+        Cmdlet          Add-Member           7.0.0.0   Microsoft.PowerShell.Utility
+        Function        Import-Configuration 1.5.1     Configuration
+        Cmdlet        Join-Path              7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        New-Module             7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Select-Object          7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Set-Alias              7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Set-Item               7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        Set-Variable           7.0.0.0   Microsoft.PowerShell.Utility
+        Function      Test-CalledFromProfile 0.2.0     Plugz
+        Cmdlet          Get-PSCallStack      7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet          Select-Object        7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet          Where-Object         7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Test-Path              7.0.0.0   Microsoft.PowerShell.Management
+        Cmdlet        Where-Object           7.2.5.500 Microsoft.PowerShell.Core
+        Cmdlet        Write-Error            7.0.0.0   Microsoft.PowerShell.Utility
+        Cmdlet        Write-Verbose          7.0.0.0   Microsoft.PowerShell.Utility
+
+        Find calls made by the 'Import-Plugz' command. Depth is limited to 2. Built-in commands are
+        included. Aliases are resolved to the resolved commands.
     #>
 
     [OutputType([FunctionCallInfo[]])]
