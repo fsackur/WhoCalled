@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.4.2
+
+- Implement FunctionCallInfo.GetHashCode
+
 ## 1.4.1
 
 - Fix FunctionCallInfo.Equals

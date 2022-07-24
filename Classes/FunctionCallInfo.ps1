@@ -76,6 +76,11 @@ class FunctionCallInfo : IFunctionCallInfo
         $this.Module = $Command.Module
     }
 
+    [int] GetHashCode()
+    {
+        return $this.Command.GetHashCode()
+    }
+
     [bool] Equals([object]$obj)
     {
         return $this.Command.Equals($obj.Command)
