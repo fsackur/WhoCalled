@@ -119,6 +119,7 @@ function Find-FunctionCall
         $_CallDepth++
 
 
+        #region Parse
         $Def = "function $($Function.Name) {$($Function.Definition)}"
         $Tokens = @()
         [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
@@ -130,8 +131,9 @@ function Find-FunctionCall
         {
             return
         }
+        #endregion Parse
 
-
+        #region Resolve commands
         $Resolver = {
             param ([string[]]$CommandNames, [string]$ModuleName, [switch]$ResolveAlias)
 
@@ -177,8 +179,9 @@ function Find-FunctionCall
         {
             return
         }
+        #endregion Resolve commands
 
-
+        #region Recurse
         $CalledCommands | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
@@ -198,5 +201,6 @@ function Find-FunctionCall
                 $CallsOfCalls | Write-Output
             }
         }
+        #endregion Recurse
     }
 }
