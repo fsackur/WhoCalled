@@ -110,21 +110,19 @@ function Find-Call
         [CallInfo]$Caller,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [int]$_CallDepth = 0,
-
-        [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [Collections.Generic.ISet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
+        [int]$_CallDepth = 0
     )
+
+    begin
+    {
+        if (-not $Script:CACHE)
+        {
+            $Script:CACHE = [Collections.Generic.Dictionary[string, CallInfo]]::new()
+        }
+    }
 
     process
     {
-        if ($_CallDepth -ge $Depth)
-        {
-            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth."
-            return
-        }
-
-
         if ($PSCmdlet.ParameterSetName -eq 'ByName')
         {
             $Function = Get-Command $Name -CommandType Function -ErrorAction Stop
@@ -139,54 +137,65 @@ function Find-Call
             $Caller = [CallInfo]$Function
         }
 
-        # Returns false if already in set
-        if (-not $_SeenFunctions.Add($Function))
+        if (-not $Function)
         {
-            return
-        }
-
-        # Return the command the user passed in
-        if (-not $_CallDepth)
-        {
-            $Caller
+            $Message = "Not a function, cannot parse for calls: $_"
+            Write-Verbose $Message
+            Write-Debug $Message
+            return $Caller
         }
 
 
-        [string[]]$CallNames = $Function | Find-CallNameFromDefinition
-
-        [CallInfo[]]$Calls = $CallNames | Resolve-Command -Module $Function.Module -ResolveAlias:$ResolveAlias
-
-
-        if (-not $All)
+        if ($_CallDepth -ge $Depth)
         {
-            $Calls = $Calls | Where-Object Source -notmatch '^Microsoft.PowerShell'
+            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $_"
+            return $Caller
+        }
+        $_CallDepth++
+        $RecurseParams = @{}
+        'Depth', 'ResolveAlias', 'All', '_CallDepth' | Get-Variable | ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
+
+
+        [CallInfo[]]$Calls = @()
+
+        $Found = $Script:CACHE[$Caller.Id]
+        if ($Found)
+        {
+            Write-Debug "$Caller`: cache hit"
+
+            # The call may have bottomed out on depth when it was first cached.
+            # Absence of calls doesn't mean the command doesn't call anything.
+            $Calls = $Found.Calls | Where-Object {$_ -ne $Caller}   # Don't include recursive calls
+            $Caller.Calls.Clear()
+        }
+        else
+        {
+            Write-Debug "$Caller`: caching"
+            $Script:CACHE[$Caller.Id] = $Caller
+
+            $CallNames = $Function |
+                Where-Object {$_} |
+                Find-CallNameFromDefinition
+
+            $Calls = $CallNames |
+                Resolve-Command -Module $Function.Module -ResolveAlias:$ResolveAlias |
+                Where-Object {$_ -ne $Caller} |     # Don't include recursive calls
+                Where-Object {$All -or $_.Source -notmatch '^Microsoft.PowerShell'}
         }
 
         if (-not $Calls)
         {
-            return
+            return $Caller
         }
 
 
-
-        $_CallDepth++
-        $RecurseParams = @{}
-        'Depth', 'ResolveAlias', 'All', '_CallDepth', '_SeenFunctions' |
-            Get-Variable |
-            ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
-
+        $Caller
         $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $Caller
             $Caller.Calls.Add($_)
 
-            [CallInfo[]]$CallsOfCalls = $_ |
-                Where-Object CommandType -eq 'Function' |
-                Find-Call @RecurseParams |
-                Where-Object Name
-
-            $_ | Write-Output
-            $CallsOfCalls | Write-Output
+            $_ | Find-Call @RecurseParams
         }
     }
 }
