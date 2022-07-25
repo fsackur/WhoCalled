@@ -145,6 +145,7 @@ function Find-Call
             return
         }
 
+        # Return the command the user passed in
         if (-not $_CallDepth)
         {
             $Caller
@@ -167,14 +168,12 @@ function Find-Call
         }
 
 
-        #region Recurse
-        $RecurseParams = [hashtable]$PSBoundParameters
-        $RecurseParams.Remove('Name')
-        $RecurseParams.Remove('Function')
-        $RecurseParams.Remove('Caller')
-        $RecurseParams.Depth = $Depth
-        $RecurseParams._CallDepth = ++$_CallDepth
-        $RecurseParams._SeenFunctions = $_SeenFunctions
+
+        $_CallDepth++
+        $RecurseParams = @{}
+        'Depth', 'ResolveAlias', 'All', '_CallDepth', '_SeenFunctions' |
+            Get-Variable |
+            ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
 
         $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
@@ -189,6 +188,5 @@ function Find-Call
             $_ | Write-Output
             $CallsOfCalls | Write-Output
         }
-        #endregion Recurse
     }
 }
