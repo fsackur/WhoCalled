@@ -115,6 +115,19 @@ class CallInfo
     }
     #endregion Constructors
 
+
+    [System.Collections.Generic.IList[CallInfo]] AsList()
+    {
+        $List = [System.Collections.Generic.List[CallInfo]]::new()
+        $List.Add($this)
+        foreach ($Call in $this.Calls)
+        {
+            $List.AddRange($Call.AsList())
+        }
+        return $List
+    }
+
+
     #region Overrides
     [string] ToString()
     {
