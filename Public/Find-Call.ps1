@@ -107,7 +107,7 @@ function Find-Call
         [switch]$All,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
-        [CallInfo]$CallingFunction,
+        [CallInfo]$Caller,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
@@ -132,11 +132,11 @@ function Find-Call
 
         if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
-            $Function = $CallingFunction.Command
+            $Function = $Caller.Command
         }
         else
         {
-            $CallingFunction = [CallInfo]$Function
+            $Caller = [CallInfo]$Function
         }
 
         # Returns false if already in set
@@ -147,7 +147,7 @@ function Find-Call
 
         if (-not $_CallDepth)
         {
-            $CallingFunction
+            $Caller
         }
 
 
@@ -171,15 +171,15 @@ function Find-Call
         $RecurseParams = [hashtable]$PSBoundParameters
         $RecurseParams.Remove('Name')
         $RecurseParams.Remove('Function')
-        $RecurseParams.Remove('CallingFunction')
+        $RecurseParams.Remove('Caller')
         $RecurseParams.Depth = $Depth
         $RecurseParams._CallDepth = ++$_CallDepth
         $RecurseParams._SeenFunctions = $_SeenFunctions
 
         $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
-            $_.CalledBy = $CallingFunction
-            $CallingFunction.Calls.Add($_)
+            $_.CalledBy = $Caller
+            $Caller.Calls.Add($_)
 
             [CallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
