@@ -15,11 +15,12 @@ class CallInfo
     # This class is a tree node
     [CallInfo]$CalledBy
     [System.Collections.Generic.IList[CallInfo]]$Calls
-    [int]$Depth
+    hidden [int]$Depth
 
     # Inner object; we'll delegate calls to this
     hidden [Management.Automation.CommandInfo]$Command
 
+    hidden [string]$Id
 
     #region Constructors
     CallInfo([string]$Name)
@@ -39,8 +40,6 @@ class CallInfo
 
     hidden [void] Initialise()
     {
-        $this.Calls = [Collections.Generic.List[CallInfo]]::new()
-
         $InheritedProperties = (
             'CmdletBinding',
             'CommandType',
@@ -68,6 +67,51 @@ class CallInfo
         $InheritedProperties | ForEach-Object {
             Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Command.$_"))
         }
+
+        $this.Calls = [Collections.Generic.List[CallInfo]]::new()
+
+        $this.Id = switch ($this.CommandType)
+        {
+            $null
+            {
+                '<not found>'
+            }
+
+            'Function'
+            {
+                $Qualifier = if ($this.Module)
+                {
+                    # https://github.com/PowerShell/PowerShell/blob/8cc39848bcd4fb98517adc79cdbe60234b375c59/src/System.Management.Automation/engine/Modules/PSModuleInfo.cs#L1596-L1599
+                    $this.Module.Name, $this.Module.Guid, $this.Module.Version -join ':' -replace '::'
+                }
+                else
+                {
+                    $this.Command.Scriptblock.GetHashCode()
+                }
+                $Qualifier, $this.Name -join '\'
+            }
+
+            'Cmdlet'
+            {
+                $Qualifier = $this.Command.ImplementingType.FullName
+                $Qualifier, $this.Name -join '\'
+            }
+
+            'Alias'
+            {
+                'Alias', $this.Name -join ':\'
+            }
+
+            'Application'
+            {
+                $this.Command.Path
+            }
+
+            default
+            {
+                throw [NotImplementedException]::new("No implementation for '$_'.")
+            }
+        }
     }
     #endregion Constructors
 
@@ -77,9 +121,19 @@ class CallInfo
         return $this.Name
     }
 
+    [bool] Equals([object]$obj)
+    {
+        return $obj -is [CallInfo] -and $obj.Id -eq $this.Id
+    }
+
+    [int] GetHashCode()
+    {
+        return $this.Id.GetHashCode()
+    }
+
     [Management.Automation.ParameterMetadata] ResolveParameter([string]$name)
     {
-        if (-not $this.Command)
+        if ($null -eq $this.Command)
         {
             throw [InvalidOperationException]::new("Cannot resolve parameter '$Name' for unresolved comand '$($this.Name)'.")
         }
