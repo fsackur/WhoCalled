@@ -151,62 +151,21 @@ function Find-Call
         }
 
 
-        $CallNames = $Function | Find-CallNameFromDefinition
+        [string[]]$CallNames = $Function | Find-CallNameFromDefinition
 
-
-        #region Resolve commands
-        $Resolver = {
-            param ([string[]]$CommandNames, [string]$ModuleName, [switch]$ResolveAlias)
-
-            foreach ($CommandName in $CommandNames)
-            {
-                try
-                {
-                    $ResolvedCommand = Get-Command $CommandName -ErrorAction Stop
-
-                    if ($ResolveAlias -and $ResolvedCommand.CommandType -eq 'Alias')
-                    {
-                        [CallInfo]$ResolvedCommand.ResolvedCommand
-                    }
-                    else
-                    {
-                        [CallInfo]$ResolvedCommand
-                    }
-                }
-                catch [Management.Automation.CommandNotFoundException]
-                {
-                    [CallInfo]$CommandName
-
-                    $_.ErrorDetails = "Command resolution failed for command '$CommandName'$(if ($ModuleName) {" in module '$ModuleName'"})."
-                    Write-Error -ErrorRecord $_
-                }
-                catch
-                {
-                    Write-Error -ErrorRecord $_
-                }
-            }
-        }
-
-        [CallInfo[]]$CalledCommands = if ($Function.Module)
-        {
-            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name, $ResolveAlias))
-        }
-        else
-        {
-            & $Resolver $CalledCommandNames '' $ResolveAlias
-        }
+        [CallInfo[]]$Calls = $CallNames | Resolve-Command -Module $Function.Module -ResolveAlias:$ResolveAlias
 
 
         if (-not $All)
         {
-            $CalledCommands = $CalledCommands | Where-Object Source -notmatch '^Microsoft.PowerShell'
+            $Calls = $Calls | Where-Object Source -notmatch '^Microsoft.PowerShell'
         }
 
-        if (-not $CalledCommands)
+        if (-not $Calls)
         {
             return
         }
-        #endregion Resolve commands
+
 
         #region Recurse
         $RecurseParams = [hashtable]$PSBoundParameters
@@ -217,7 +176,7 @@ function Find-Call
         $RecurseParams._CallDepth = ++$_CallDepth
         $RecurseParams._SeenFunctions = $_SeenFunctions
 
-        $CalledCommands | ForEach-Object {
+        $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
             $_.CalledBy = $CallingFunction
             $CallingFunction.Calls.Add($_)
