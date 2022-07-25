@@ -151,19 +151,8 @@ function Find-Call
         }
 
 
-        #region Parse
-        $Def = "function $($Function.Name) {$($Function.Definition)}"
-        $Tokens = @()
-        [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
+        $CallNames = $Function | Find-CallNameFromDefinition
 
-
-        $CommandTokens = $Tokens | Where-Object {$_.TokenFlags -band 'CommandName'}
-        $CalledCommandNames = $CommandTokens.Text | Sort-Object -Unique
-        if (-not $CalledCommandNames)
-        {
-            return
-        }
-        #endregion Parse
 
         #region Resolve commands
         $Resolver = {
