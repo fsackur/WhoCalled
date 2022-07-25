@@ -4,9 +4,9 @@
   <ViewDefinitions>
 
     <View>
-        <Name>FunctionCallInfo</Name>
+        <Name>CallInfo</Name>
         <ViewSelectedBy>
-          <TypeName>IFunctionCallInfo</TypeName>
+          <TypeName>CallInfo</TypeName>
         </ViewSelectedBy>
         <TableControl>
 

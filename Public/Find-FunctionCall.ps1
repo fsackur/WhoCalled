@@ -31,7 +31,7 @@ function Find-FunctionCall
 
         .OUTPUTS
 
-        [FunctionCallInfo]
+        [CallInfo]
 
         This command outputs an object similar to System.Management.Automation.FunctionInfo. Note
         that this is not a child class of FunctionInfo.
@@ -90,7 +90,7 @@ function Find-FunctionCall
         included. Aliases are resolved to the resolved commands.
     #>
 
-    [OutputType([FunctionCallInfo[]])]
+    [OutputType([CallInfo[]])]
     [CmdletBinding(DefaultParameterSetName = 'FromFunction', PositionalBinding = $false)]
     param
     (
@@ -107,7 +107,7 @@ function Find-FunctionCall
         [switch]$All,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
-        [IFunctionCallInfo]$CallingFunction,
+        [CallInfo]$CallingFunction,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
@@ -136,7 +136,7 @@ function Find-FunctionCall
         }
         else
         {
-            $CallingFunction = [FunctionCallInfo]$Function
+            $CallingFunction = [CallInfo]$Function
         }
 
         # Returns false if already in set
@@ -177,16 +177,16 @@ function Find-FunctionCall
 
                     if ($ResolveAlias -and $ResolvedCommand.CommandType -eq 'Alias')
                     {
-                        [FunctionCallInfo]$ResolvedCommand.ResolvedCommand
+                        [CallInfo]$ResolvedCommand.ResolvedCommand
                     }
                     else
                     {
-                        [FunctionCallInfo]$ResolvedCommand
+                        [CallInfo]$ResolvedCommand
                     }
                 }
                 catch [Management.Automation.CommandNotFoundException]
                 {
-                    [UnresolvedFunctionCallInfo]$CommandName
+                    [CallInfo]$CommandName
 
                     $_.ErrorDetails = "Command resolution failed for command '$CommandName'$(if ($ModuleName) {" in module '$ModuleName'"})."
                     Write-Error -ErrorRecord $_
@@ -198,7 +198,7 @@ function Find-FunctionCall
             }
         }
 
-        [IFunctionCallInfo[]]$CalledCommands = if ($Function.Module)
+        [CallInfo[]]$CalledCommands = if ($Function.Module)
         {
             $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name, $ResolveAlias))
         }
@@ -233,7 +233,7 @@ function Find-FunctionCall
             $_.CalledBy = $CallingFunction
             $CallingFunction.Calls.Add($_)
 
-            [IFunctionCallInfo[]]$CallsOfCalls = $_ |
+            [CallInfo[]]$CallsOfCalls = $_ |
                 Where-Object CommandType -eq 'Function' |
                 Find-FunctionCall @RecurseParams |
                 Where-Object Name
