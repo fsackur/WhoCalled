@@ -163,6 +163,11 @@ function Find-Call
         {
             Write-Debug "$Caller`: cache hit"
 
+            if ($Found.HasNoCalls)
+            {
+                $Caller.HasNoCalls = $true
+                return $Caller
+            }
             # The call may have bottomed out on depth when it was first cached.
             # Absence of calls doesn't mean the command doesn't call anything.
             $Calls = $Found.Calls | Where-Object {$_ -ne $Caller}   # Don't include recursive calls
@@ -185,6 +190,7 @@ function Find-Call
 
         if (-not $Calls)
         {
+            $Caller.HasNoCalls = $true
             return $Caller
         }
 

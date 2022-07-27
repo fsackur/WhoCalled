@@ -16,6 +16,7 @@ class CallInfo
     [CallInfo]$CalledBy
     [System.Collections.Generic.IList[CallInfo]]$Calls
     hidden [int]$Depth
+    hidden [bool]$HasNoCalls    # to distinguish from 'not checked yet'
 
     # Inner object; we'll delegate calls to this
     hidden [Management.Automation.CommandInfo]$Command
@@ -69,6 +70,7 @@ class CallInfo
         }
 
         $this.Calls = [Collections.Generic.List[CallInfo]]::new()
+        $this.HasNoCalls = $false
 
         $this.Id = switch ($this.CommandType)
         {
