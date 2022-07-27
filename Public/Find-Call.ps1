@@ -13,8 +13,8 @@ function Find-Call
         .PARAMETER Name
         Provide the name of a function to analyse.
 
-        .PARAMETER Function
-        Provide a function object as input. This will be the output of Get-Command.
+        .PARAMETER Command
+        Provide a command object as input. This will be the output of Get-Command.
 
         .PARAMETER Depth
         Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
@@ -27,14 +27,14 @@ function Find-Call
 
         .INPUTS
 
-        [System.Management.Automation.FunctionInfo]
+        [System.Management.Automation.CommandInfo]
 
         .OUTPUTS
 
         [CallInfo]
 
-        This command outputs an object similar to System.Management.Automation.FunctionInfo. Note
-        that this is not a child class of FunctionInfo.
+        This command outputs an object similar to System.Management.Automation.CommandInfo. Note
+        that this is not a child class of CommandInfo.
 
         .EXAMPLE
         Find-Call Install-Module
@@ -91,14 +91,14 @@ function Find-Call
     #>
 
     [OutputType([CallInfo[]])]
-    [CmdletBinding(DefaultParameterSetName = 'FromFunction', PositionalBinding = $false)]
+    [CmdletBinding(DefaultParameterSetName = 'FromCommand', PositionalBinding = $false)]
     param
     (
         [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline, Position = 0)]
         [string]$Name,
 
-        [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline, Position = 0)]
-        [Management.Automation.FunctionInfo]$Function,
+        [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
+        [Management.Automation.CommandInfo]$Command,
 
         [int]$Depth = 4,
 
@@ -125,19 +125,19 @@ function Find-Call
     {
         if ($PSCmdlet.ParameterSetName -eq 'ByName')
         {
-            $Function = Get-Command $Name -CommandType Function -ErrorAction Stop
+            $Command = Get-Command $Name -ErrorAction Stop
+        }
+        elseif ($PSCmdlet.ParameterSetName -eq 'Recursing')
+        {
+            $Command = $Caller.Command
         }
 
-        if ($PSCmdlet.ParameterSetName -eq 'Recursing')
+        if ($PSCmdlet.ParameterSetName -ne 'Recursing')
         {
-            $Function = $Caller.Command
-        }
-        else
-        {
-            $Caller = [CallInfo]$Function
+            $Caller = [CallInfo]$Command
         }
 
-        if (-not $Function)
+        if (-not ($Command -as [Management.Automation.FunctionInfo]))
         {
             $Message = "Not a function, cannot parse for calls: $_"
             Write-Verbose $Message
@@ -178,12 +178,12 @@ function Find-Call
             Write-Debug "$Caller`: caching"
             $Script:CACHE[$Caller.Id] = $Caller
 
-            $CallNames = $Function |
+            $CallNames = $Command |
                 Where-Object {$_} |
                 Find-CallNameFromDefinition
 
             $Calls = $CallNames |
-                Resolve-Command -Module $Function.Module -ResolveAlias:$ResolveAlias |
+                Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
                 Where-Object {$_ -ne $Caller} |     # Don't include recursive calls
                 Where-Object {$All -or $_.Source -notmatch '^Microsoft.PowerShell'}
         }
