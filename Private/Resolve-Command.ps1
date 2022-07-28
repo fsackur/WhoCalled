@@ -5,6 +5,7 @@ function Resolve-Command
     param
     (
         [Parameter(Mandatory, ValueFromPipeline)]
+        [SupportsWildcards()]
         [string]$Name,
 
         [AllowNull()]
@@ -20,12 +21,8 @@ function Resolve-Command
 
             try
             {
-                $ResolvedCommand = Get-Command $Name -ErrorAction Stop
-                if ($ResolveAlias -and $ResolvedCommand.CommandType -eq 'Alias')
-                {
-                    $ResolvedCommand = $ResolvedCommand.ResolvedCommand
-                }
-                return $ResolvedCommand
+                return Get-Command $Name -ErrorAction Stop |
+                    ForEach-Object {if ($ResolveAlias -and $_.CommandType -eq 'Alias') {$_.ResolvedCommand} else {$_}}
             }
             catch [Management.Automation.CommandNotFoundException]
             {
@@ -42,7 +39,7 @@ function Resolve-Command
 
     process
     {
-        [CallInfo]$Call = if ($Module)
+        [CallInfo[]]$Calls = if ($Module)
         {
             $Module.Invoke($Resolver, @($Name, $Module.Name, $ResolveAlias))
         }
@@ -50,6 +47,6 @@ function Resolve-Command
         {
             & $Resolver $Name '' $ResolveAlias
         }
-        $Call
+        $Calls
     }
 }

@@ -184,6 +184,7 @@ function Find-Call
 
             $Calls = $CallNames |
                 Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
+                Write-Output |
                 Where-Object {$_ -ne $Caller} |     # Don't include recursive calls
                 Where-Object {$All -or $_.Source -notmatch '^Microsoft.PowerShell'}
         }
