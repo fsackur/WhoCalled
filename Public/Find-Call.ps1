@@ -199,7 +199,7 @@ function Find-Call
         $Caller
         $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
-            $_.CalledBy = $Caller
+            if ($Caller -notin $_.CalledBy) {$_.CalledBy.Add($Caller)}
             $Caller.Calls.Add($_)
 
             $_ | Find-Call @RecurseParams
