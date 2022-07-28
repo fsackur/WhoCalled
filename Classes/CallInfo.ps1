@@ -2,7 +2,8 @@ class CallInfo
 {
     <#
         .SYNOPSIS
-        A pseudo-child of System.Management.Automation.CommandInfo that's also a tree node.
+        A pseudo-child of System.Management.Automation.CommandInfo that's also a node in a graph of
+        calls.
 
         We can't inherit because all the constructors of CommandInfo are marked internal.
     #>
@@ -13,7 +14,7 @@ class CallInfo
     [psmoduleinfo]$Module
 
     # This class is a tree node
-    [CallInfo]$CalledBy
+    [System.Collections.Generic.IList[CallInfo]]$CalledBy
     [System.Collections.Generic.IList[CallInfo]]$Calls
     hidden [int]$Depth
     hidden [bool]$HasNoCalls    # to distinguish from 'not checked yet'
@@ -69,6 +70,7 @@ class CallInfo
             Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Command.$_"))
         }
 
+        $this.CalledBy = [Collections.Generic.List[CallInfo]]::new()
         $this.Calls = [Collections.Generic.List[CallInfo]]::new()
         $this.HasNoCalls = $false
 
