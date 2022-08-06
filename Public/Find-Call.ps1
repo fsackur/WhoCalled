@@ -142,15 +142,21 @@ function Find-Call
             $Message = if ($Command) {"Not a function, cannot parse for calls: $_"} else {"Command not found: $_"}
             Write-Verbose $Message
             Write-Debug $Message
-            return $Caller
+            return
         }
 
 
         if ($_CallDepth -ge $Depth)
         {
             Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $_"
-            return $Caller
+            return
         }
+
+        if ($_CallDepth -eq 0)
+        {
+            $Caller
+        }
+
         $_CallDepth++
         $RecurseParams = @{}
         'Depth', 'ResolveAlias', 'All', '_CallDepth' | Get-Variable | ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
@@ -166,7 +172,7 @@ function Find-Call
             if ($Found.HasNoCalls)
             {
                 $Caller.HasNoCalls = $true
-                return $Caller
+                return
             }
             # The call may have bottomed out on depth when it was first cached.
             # Absence of calls doesn't mean the command doesn't call anything.
@@ -192,16 +198,16 @@ function Find-Call
         if (-not $Calls)
         {
             $Caller.HasNoCalls = $true
-            return $Caller
+            return
         }
 
 
-        $Caller
         $Calls | ForEach-Object {
             $_.Depth = $_CallDepth
             if ($Caller -notin $_.CalledBy) {$_.CalledBy.Add($Caller)}
             $Caller.Calls.Add($_)
 
+            $_
             $_ | Find-Call @RecurseParams
         }
     }
