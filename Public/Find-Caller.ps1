@@ -39,6 +39,29 @@ function Find-Caller
         Note that the 'Get-ModuleDependencies' command is not exported; it is a private command in
         the PowerShellGet module. This command will import modules in order to resolve private
         commands.
+
+        .EXAMPLE
+        Find-Caller Import-* -Module Plugz, Metadata, Configuration -Depth 2 -IncludeCurrentScope
+
+        CommandType Name                            Version Source
+        ----------- ----                            ------- ------
+        Function    Import-Configuration            1.5.1   Configuration
+        Function      Get-PlugzConfig               0.2.0   Plugz
+        Function        Export-PlugzProfile         0.2.0   Plugz
+        Function        Import-Plugz                0.2.0   Plugz
+        Function    Import-Metadata                 1.5.3   Metadata
+        Function      Import-Configuration          1.5.1   Configuration
+        Function        Get-PlugzConfig             0.2.0   Plugz
+        Function      Import-ParameterConfiguration 1.5.1   Configuration
+        Function    Import-Plugz                    0.2.0   Plugz
+        Function    Import-ParameterConfiguration   1.5.1   Configuration
+        Function    Import-GitModule
+
+        Find calls made to any commands matching 'Import-*' from commands in the Plugz, Metadata, or
+        Configuration modules, or from commands in the current scope that are not exported from any
+        module. Depth is limited to 2.
+
+        Note that the modules will be imported.
     #>
 
     param
@@ -56,6 +79,11 @@ function Find-Caller
         [ValidateNotNullOrEmpty()]
         [string[]]$Module,
 
+        # Include functions from the parent scope.
+        # Note that this will not include module functions when this command is called from a module
+        # that did not import this command's module.
+        [switch]$IncludeCurrentScope,
+
         # Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
         [ValidateRange(0, 100)]
         [int]$Depth = 4
@@ -70,6 +98,11 @@ function Find-Caller
 
         $Commands = $Modules | ForEach-Object {
             $_.Invoke({Get-Command -Module $args[0]}, $_)
+        }
+
+        if ($IncludeCurrentScope)
+        {
+            $Commands += Get-Command -CommandType Function | Where-Object Module -eq $null
         }
 
         $Commands | Find-Call -NoOutput -Depth $Depth -WarningAction Ignore
