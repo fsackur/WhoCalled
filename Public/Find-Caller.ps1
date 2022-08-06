@@ -68,7 +68,7 @@ function Find-Caller
             $_.Invoke({Get-Command -Module $args[0]}, $_)
         }
 
-        $null = $Commands | Find-Call -Depth 10 -WarningAction Ignore
+        $Commands | Find-Call -NoOutput -Depth 10 -WarningAction Ignore
     }
 
     process

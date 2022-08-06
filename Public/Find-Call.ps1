@@ -102,6 +102,10 @@ function Find-Call
         # Specifies to return all commands. By default, built-in modules are excluded.
         [switch]$All,
 
+        # Only populate the cache
+        [Parameter(DontShow)]
+        [switch]$NoOutput,
+
         # For recursion
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
         [CallInfo]$Caller,
@@ -220,7 +224,7 @@ function Find-Call
         #endregion Recurse
 
         #region Output
-        if ($PSCmdlet.ParameterSetName -ne 'Recursing')
+        if ($PSCmdlet.ParameterSetName -ne 'Recursing' -and -not $NoOutput)
         {
             if ($Warnings)
             {
