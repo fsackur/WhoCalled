@@ -125,18 +125,23 @@ function Find-Call
 
     process
     {
-        if ($PSCmdlet.ParameterSetName -eq 'ByName')
-        {
-            $Command = Get-Command $Name -ErrorAction Stop
-        }
-        elseif ($PSCmdlet.ParameterSetName -eq 'Recursing')
+        if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
             $Command = $Caller.Command
         }
-
-        if ($PSCmdlet.ParameterSetName -ne 'Recursing')
+        else
         {
+            if ($PSCmdlet.ParameterSetName -eq 'ByName')
+            {
+                $Command = Get-Command $Name -ErrorAction Stop
+            }
             $Caller = [CallInfo]$Command
+        }
+
+        if ($_CallDepth -ge $Depth)
+        {
+            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $_"
+            return
         }
 
         if (-not ($Command -as [Management.Automation.FunctionInfo]))
@@ -148,32 +153,15 @@ function Find-Call
         }
 
 
-        if ($_CallDepth -ge $Depth)
-        {
-            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $_"
-            return
-        }
-
-        if ($_CallDepth -eq 0)
-        {
-            $Caller
-        }
-
-        $_CallDepth++
-        $RecurseParams = @{}
-        'Depth', 'ResolveAlias', 'All', '_CallDepth' | Get-Variable | ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
-
-
         [CallInfo[]]$Calls = @()
 
         $Found = $Script:CACHE[$Caller.Id]
         if ($Found)
         {
             Write-Debug "$Caller`: cache hit"
-
-            if ($Found.HasNoCalls)
+            $Caller = $Found
+            if ($Caller.HasNoCalls)
             {
-                $Caller.HasNoCalls = $true
                 return
             }
             # The call may have bottomed out on depth when it was first cached.
@@ -185,7 +173,10 @@ function Find-Call
         {
             Write-Debug "$Caller`: caching"
             $Script:CACHE[$Caller.Id] = $Caller
+        }
 
+        if (-not $Calls)
+        {
             $CallNames = $Command |
                 Where-Object {$_} |
                 Find-CallNameFromDefinition
@@ -193,24 +184,35 @@ function Find-Call
             $Calls = $CallNames |
                 Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
                 Write-Output |
-                Where-Object {$_ -ne $Caller} |     # Don't include recursive calls
-                Where-Object {$All -or $_.Source -notmatch '^Microsoft.PowerShell'}
+                Where-Object {$_ -ne $Caller}   # Don't include recursive calls
         }
 
-        if (-not $Calls)
+        $Caller.HasNoCalls = -not $Calls
+        if (-not $All)
         {
-            $Caller.HasNoCalls = $true
-            return
+            $Calls = $Calls | Where-Object {$_.Source -notmatch '^Microsoft.PowerShell'}
         }
 
+
+        $_CallDepth++
+        $RecurseParams = @{}
+        Get-Variable 'Depth', 'ResolveAlias', 'All', '_CallDepth' |
+            ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
 
         $Calls | ForEach-Object {
-            $_.Depth = $_CallDepth
-            if ($Caller -notin $_.CalledBy) {$_.CalledBy.Add($Caller)}
+            if ($Caller -notin $_.CalledBy)
+            {
+                $_.CalledBy.Add($Caller)
+            }
             $Caller.Calls.Add($_)
 
-            $_
             $_ | Find-Call @RecurseParams
+        }
+
+
+        if ($PSCmdlet.ParameterSetName -ne 'Recursing')
+        {
+            $Caller.AsList(0, 'Calls') | Where-Object Depth -le $Depth
         }
     }
 }
