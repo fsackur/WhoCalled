@@ -90,6 +90,8 @@ function Find-Call
         included. Aliases are resolved to the resolved commands.
     #>
 
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSReviewUnusedParameter', 'All', Justification = "It's used in a scriptblock")]
+
     [OutputType([CallInfo[]])]
     [CmdletBinding(DefaultParameterSetName = 'FromCommand', PositionalBinding = $false)]
     param
