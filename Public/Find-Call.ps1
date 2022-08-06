@@ -97,6 +97,7 @@ function Find-Call
     param
     (
         [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline, Position = 0)]
+        [SupportsWildcards()]
         [string]$Name,
 
         [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
@@ -125,16 +126,19 @@ function Find-Call
 
     process
     {
+        if ($PSCmdlet.ParameterSetName -eq 'ByName')
+        {
+            $Params = [hashtable]$PSBoundParameters
+            $Params.Remove('Name')
+            return Get-Command $Name -ErrorAction Stop | Find-Call @Params
+        }
+
         if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
             $Command = $Caller.Command
         }
         else
         {
-            if ($PSCmdlet.ParameterSetName -eq 'ByName')
-            {
-                $Command = Get-Command $Name -ErrorAction Stop
-            }
             $Caller = [CallInfo]$Command
         }
 
