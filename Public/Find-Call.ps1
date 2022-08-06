@@ -163,11 +163,9 @@ function Find-Call
         if ($Found)
         {
             Write-Debug "$Caller`: cache hit"
+            $Caller.CalledBy | Where-Object {$_ -notin $Found.CalledBy} | ForEach-Object {$Found.CalledBy.Add($_)}
             $Caller = $Found
-            if ($Caller.HasNoCalls)
-            {
-                return
-            }
+
             # The call may have bottomed out on depth when it was first cached.
             # Absence of calls doesn't mean the command doesn't call anything.
             $Calls = $Found.Calls | Where-Object {$_ -ne $Caller}   # Don't include recursive calls
@@ -179,7 +177,7 @@ function Find-Call
             $Script:CACHE[$Caller.Id] = $Caller
         }
 
-        if (-not $Calls)
+        if (-not $Calls -and -not $Caller.HasNoCalls)
         {
             $CallNames = $Command |
                 Where-Object {$_} |
@@ -203,7 +201,7 @@ function Find-Call
         Get-Variable 'Depth', 'ResolveAlias', 'All', '_CallDepth' |
             ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
 
-        $Calls | ForEach-Object {
+        $Calls | Where-Object Name | ForEach-Object {
             if ($Caller -notin $_.CalledBy)
             {
                 $_.CalledBy.Add($Caller)
