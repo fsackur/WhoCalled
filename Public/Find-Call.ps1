@@ -113,7 +113,10 @@ function Find-Call
         [CallInfo]$Caller,
 
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [int]$_CallDepth = 0
+        [int]$_CallDepth = 0,
+
+        [Parameter(DontShow, ParameterSetName = 'Recursing')]
+        [Collections.Generic.ISet[string]]$_StackSeen = [Collections.Generic.HashSet[string]]::new()
     )
 
     begin
@@ -142,15 +145,23 @@ function Find-Call
             $Caller = [CallInfo]$Command
         }
 
+
+        $_StackSeen = [Collections.Generic.HashSet[string]]::new($_StackSeen)
+        if (-not $_StackSeen.Add($Caller.Id))
+        {
+            Write-Debug "Already seen: $Caller"
+            return
+        }
+
         if ($_CallDepth -ge $Depth)
         {
-            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $_"
+            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $Caller"
             return
         }
 
         if (-not ($Command -as [Management.Automation.FunctionInfo]))
         {
-            $Message = if ($Command) {"Not a function, cannot parse for calls: $_"} else {"Command not found: $_"}
+            $Message = if ($Command) {"Not a function, cannot parse for calls: $Caller"} else {"Command not found: $Caller"}
             Write-Verbose $Message
             Write-Debug $Message
             return
@@ -198,7 +209,7 @@ function Find-Call
 
         $_CallDepth++
         $RecurseParams = @{}
-        Get-Variable 'Depth', 'ResolveAlias', 'All', '_CallDepth' |
+        Get-Variable 'Depth', 'ResolveAlias', 'All', '_CallDepth', '_StackSeen' |
             ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
 
         $Calls | Where-Object Name | ForEach-Object {
