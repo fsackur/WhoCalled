@@ -103,6 +103,7 @@ function Find-Call
         [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
         [Management.Automation.CommandInfo]$Command,
 
+        [ValidateRange(0, 100)]
         [int]$Depth = 4,
 
         [switch]$ResolveAlias,
@@ -158,7 +159,8 @@ function Find-Call
         if ($_CallDepth -ge $Depth)
         {
             Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $Caller"
-            return
+            # ...since we always return the original caller, return it when depth is 0...
+            if ($Depth -eq 0) {return $Caller} else {return}
         }
 
         if (-not ($Command -as [Management.Automation.FunctionInfo]))
