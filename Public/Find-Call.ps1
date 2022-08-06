@@ -139,7 +139,7 @@ function Find-Call
 
         if (-not ($Command -as [Management.Automation.FunctionInfo]))
         {
-            $Message = "Not a function, cannot parse for calls: $_"
+            $Message = if ($Command) {"Not a function, cannot parse for calls: $_"} else {"Command not found: $_"}
             Write-Verbose $Message
             Write-Debug $Message
             return $Caller
