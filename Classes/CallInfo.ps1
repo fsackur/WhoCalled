@@ -1,3 +1,9 @@
+enum CallDirection
+{
+    Calls = 0
+    CalledBy = 1
+}
+
 class CallInfo
 {
     <#
@@ -120,13 +126,25 @@ class CallInfo
     #endregion Constructors
 
 
-    [System.Collections.Generic.IList[CallInfo]] AsList()
+    hidden [System.Collections.Generic.IList[CallInfo]] AsList([int]$Depth, [CallDirection]$Direction)
     {
+        [CallDirection]$OtherDirection = [int](-not $Direction)
+
+        $Cloned = if ($this.Command) {[CallInfo]$this.Command} else {[CallInfo]$this.Name}
+        $Cloned.HasNoCalls = $this.HasNoCalls
+        $Cloned.Depth = $Depth
+
         $List = [System.Collections.Generic.List[CallInfo]]::new()
-        $List.Add($this)
-        foreach ($Call in $this.Calls)
+        $List.Add($Cloned)
+        $Depth++
+        foreach ($Call in $this.$Direction)
         {
-            $List.AddRange($Call.AsList())
+            $RecursedList = $Call.AsList($Depth, $Direction)
+
+            $Cloned.$Direction.Add($Call)
+            $RecursedList[0].$OtherDirection.Add($Cloned)
+
+            $List.AddRange($RecursedList)
         }
         return $List
     }
