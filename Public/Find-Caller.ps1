@@ -54,7 +54,11 @@ function Find-Caller
         # Modules to search for callers.
         [Parameter(Mandatory, Position = 1)]
         [ValidateNotNullOrEmpty()]
-        [string[]]$Module
+        [string[]]$Module,
+
+        # Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
+        [ValidateRange(0, 100)]
+        [int]$Depth = 4
     )
 
     begin
@@ -68,7 +72,7 @@ function Find-Caller
             $_.Invoke({Get-Command -Module $args[0]}, $_)
         }
 
-        $Commands | Find-Call -NoOutput -Depth 10 -WarningAction Ignore
+        $Commands | Find-Call -NoOutput -Depth $Depth -WarningAction Ignore
     }
 
     process
