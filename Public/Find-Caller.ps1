@@ -122,65 +122,33 @@ function Find-Caller
 
     process
     {
-        if ($PSCmdlet.ParameterSetName -eq 'ByName')
+        if ($PSCmdlet.ParameterSetName -eq 'FromCommand')
         {
-            $Source, $_Name = $Name -split '\\', 2
-            if ($_Name) {$Name = $_Name} else {$Source = ''}
-
-            $Message = "Command '$Name' was not found."
-            $QualifyTip = "Try qualifying the command name, e.g. 'PowerShellGet\Find-Module'."
-            try
+            $Calls = [CallInfo]$Command
+        }
+        else
+        {
+            if ($Name -match '(?<Source>.*)\\(?<Name>.*?)')
             {
-                $_Command = Get-Command $Name -Module $Source -ErrorAction Stop
-
-                # Get-Command does not error on wildcards
-                if (-not $_Command)
-                {
-                    Write-Error -Exception ([Management.Automation.CommandNotFoundException]::new($Message)) -ErrorAction Stop
-                }
+                $Name = $Matches.Name
+                $Source = $Matches.Source
             }
-            catch [Management.Automation.CommandNotFoundException]
+            else {$Source = ''}
+
+            $CallIds = $Script:CACHE.Keys -like "*$Name"
+            if ($Source)
             {
-                $_Command = $Commands | Where-Object {
-                    $_.Name -eq $Name -and
-                    (-not $Source -or $_.Source -eq $Source)
-                }
-
-                if (-not $_Command)
-                {
-                    $SourceModules = if ($Source)
-                    {
-                        Get-Module $Source -ListAvailable -ErrorAction Stop | Import-Module -PassThru -ErrorAction Stop
-                    }
-                    else
-                    {
-                        $Modules
-                    }
-
-                    $_Command = $SourceModules |
-                        ForEach-Object {$Name | Resolve-Command -Module $_ -ResolveAlias -ErrorAction Ignore} |
-                        Write-Output |
-                        Select-Object -ExpandProperty Command |
-                        Where-Object {(-not $Source) -or $_.Source -eq $Source}
-                }
+                $CallIds = @($CallIds) -like "$Source`:*"
             }
-
-            if ($_Command.Count -ne 1)
-            {
-                if ($_Command) {$Message = "Multiple commands found with name '$Name'."}
-                if (-not $Source) {$Message = $Message, $QualifyTip -join ' '}
-                Write-Error -Exception ([Management.Automation.CommandNotFoundException]::new($Message)) -ErrorAction Stop
-            }
-
-            $Command = $_Command
+            $Calls = $Script:CACHE[$CallIds]
         }
 
-        $Call = [CallInfo]$Command
-        $Found = $Script:CACHE[$Call.Id]
-        if (-not $Found)
+        if (-not $Calls)
         {
-            Write-Error "Could not find '$Call'." -ErrorAction Stop
+            Write-Error "Could not find command '$_'." -ErrorAction Stop
         }
-        $Found.AsList(0, 'CalledBy') | Where-Object Depth -le $Depth
+        $Calls | ForEach-Object {
+            $_.AsList(0, 'CalledBy') | Where-Object Depth -le $Depth
+        }
     }
 }
