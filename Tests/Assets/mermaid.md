@@ -96,3 +96,109 @@ Function          ParameterBinder           1.5.1   Configuration
 Function          Update-Object             1.5.3   Metadata
 Function      Test-CalledFromProfile        0.2.0   Plugz
 ```
+
+## PowerShellGet
+
+```mermaid
+graph LR;
+    PowerShellGet\Set-ModuleSourcesVariable-->PowerShellGet\Get-PublishLocation;
+    PowerShellGet\Add-PackageSource-->PowerShellGet\Get-PublishLocation;
+    PowerShellGet\Get-InstalledModuleAuthenticodeSignature-->PowerShellGet\Get-AuthenticodePublisher;
+    PowerShellGet\Get-ModuleDependencies-->PowerShellGet\Get-ManifestHashTable;
+    PowerShellGet\Get-ModuleDependencies-->PowerShellGet\ValidateAndGet-RequiredModuleDetails;
+    PowerShellGet\ValidateAndGet-AuthenticodeSignature-->PowerShellGet\Get-AuthenticodePublisher;
+    PowerShellGet\Publish-Module-->PowerShellGet\Compare-PrereleaseVersions;
+    PowerShellGet\Publish-Module-->PowerShellGet\Find-Module;
+    PowerShellGet\Publish-Module-->PowerShellGet\Find-Script;
+    PowerShellGet\Publish-Module-->PowerShellGet\Get-ProviderName;
+    PowerShellGet\Publish-Module-->PowerShellGet\Get-PSRepository;
+    PowerShellGet\Publish-Module-->PowerShellGet\Install-NuGetClientBinaries;
+    PowerShellGet\Publish-Module-->PowerShellGet\Join-PathUtility;
+    PowerShellGet\Publish-Module-->PowerShellGet\Publish-PSArtifactUtility;
+    PowerShellGet\Publish-Module-->PowerShellGet\Resolve-PathHelper;
+    PowerShellGet\Publish-Module-->PowerShellGet\Test-WebUri;
+    PowerShellGet\Publish-Module-->PowerShellGet\ThrowError;
+    PowerShellGet\Publish-Module-->PowerShellGet\Validate-VersionParameters;
+    PowerShellGet\Publish-Module-->PowerShellGet\ValidateAndGet-VersionPrereleaseStrings;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Get-AvailableRoleCapabilityName;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Get-ExportedDscResources;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Get-ManifestHashTable;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Get-ModuleDependencies;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Install-NuGetClientBinaries;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Join-PathUtility;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\New-NugetPackage;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\New-NuspecFile;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\Publish-NugetPackage;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\ThrowError;
+    PowerShellGet\Publish-PSArtifactUtility-->PowerShellGet\ValidateAndGet-ScriptDependencies;
+    PowerShellGet\Publish-Script-->PowerShellGet\Compare-PrereleaseVersions;
+    PowerShellGet\Publish-Script-->PowerShellGet\Find-Module;
+    PowerShellGet\Publish-Script-->PowerShellGet\Find-Script;
+    PowerShellGet\Publish-Script-->PowerShellGet\Get-ProviderName;
+    PowerShellGet\Publish-Script-->PowerShellGet\Get-PSRepository;
+    PowerShellGet\Publish-Script-->PowerShellGet\Install-NuGetClientBinaries;
+    PowerShellGet\Publish-Script-->PowerShellGet\Publish-PSArtifactUtility;
+    PowerShellGet\Publish-Script-->PowerShellGet\Resolve-PathHelper;
+    PowerShellGet\Publish-Script-->PowerShellGet\Test-ScriptFileInfo;
+    PowerShellGet\Publish-Script-->PowerShellGet\Test-WebUri;
+    PowerShellGet\Publish-Script-->PowerShellGet\ThrowError;
+    PowerShellGet\Publish-Script-->PowerShellGet\ValidateAndGet-VersionPrereleaseStrings;
+```
+
+```
+> Find-Call Install-Module
+
+CommandType Name                                          Version Source
+----------- ----                                          ------- ------
+Function    Install-Module                                2.2.5   PowerShellGet
+Function      Get-ProviderName                            2.2.5   PowerShellGet
+Function      Get-PSRepository                            2.2.5   PowerShellGet
+Cmdlet          Get-PackageSource                         1.4.7   PackageManagement
+Function        New-ModuleSourceFromPackageSource         2.2.5   PowerShellGet
+Function      Install-NuGetClientBinaries                 2.2.5   PowerShellGet
+Cmdlet          Get-PackageProvider                       1.4.7   PackageManagement
+Function        Get-ParametersHashtable                   2.2.5   PowerShellGet
+Cmdlet          Import-PackageProvider                    1.4.7   PackageManagement
+Cmdlet          Install-PackageProvider                   1.4.7   PackageManagement
+Function        Test-RunningAsElevated                    2.2.5   PowerShellGet
+Function        ThrowError                                2.2.5   PowerShellGet
+Cmdlet        Install-Package                             1.4.7   PackageManagement
+Function      New-PSGetItemInfo                           2.2.5   PowerShellGet
+Function        Get-EntityName                            2.2.5   PowerShellGet
+Function        Get-First                                 2.2.5   PowerShellGet
+Function        Get-SourceLocation                        2.2.5   PowerShellGet
+Function          Set-ModuleSourcesVariable               2.2.5   PowerShellGet
+Function            DeSerialize-PSObject                  2.2.5   PowerShellGet
+Function            Get-PublishLocation                   2.2.5   PowerShellGet
+Function            Get-ScriptSourceLocation              2.2.5   PowerShellGet
+Function            Save-ModuleSources                    2.2.5   PowerShellGet
+Function            Set-PSGalleryRepository               2.2.5   PowerShellGet
+Function        Get-SourceName                            2.2.5   PowerShellGet
+Function          Set-ModuleSourcesVariable               2.2.5   PowerShellGet
+Function          Test-EquivalentLocation                 2.2.5   PowerShellGet
+Function        Get-UrlFromSwid                           2.2.5   PowerShellGet
+Function      Test-ModuleInstalled                        2.2.5   PowerShellGet
+Function        Test-ItemPrereleaseVersionRequirements    2.2.5   PowerShellGet
+Function          Compare-PrereleaseVersions              2.2.5   PowerShellGet
+Function          ValidateAndGet-VersionPrereleaseStrings 2.2.5   PowerShellGet
+Function            ThrowError                            2.2.5   PowerShellGet
+Function        Test-ModuleSxSVersionSupport              2.2.5   PowerShellGet
+Function      Test-RunningAsElevated                      2.2.5   PowerShellGet
+Function      ThrowError                                  2.2.5   PowerShellGet
+Function      Validate-VersionParameters                  2.2.5   PowerShellGet
+Function        Compare-PrereleaseVersions                2.2.5   PowerShellGet
+Function        Test-WildcardPattern                      2.2.5   PowerShellGet
+Function        ThrowError                                2.2.5   PowerShellGet
+Function        ValidateAndGet-VersionPrereleaseStrings   2.2.5   PowerShellGet
+```
+
+```
+> Find-Caller Get-ModuleDependencies -Module PowerShellGet, PackageManagement
+
+CommandType Name                        Version Source
+----------- ----                        ------- ------
+Function    Get-ModuleDependencies      2.2.5   PowerShellGet
+Function      Publish-PSArtifactUtility 2.2.5   PowerShellGet
+Function        Publish-Module          2.2.5   PowerShellGet
+Function        Publish-Script          2.2.5   PowerShellGet
+```
