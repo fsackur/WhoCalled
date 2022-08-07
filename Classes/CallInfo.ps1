@@ -134,7 +134,7 @@ class CallInfo
         $List = [System.Collections.Generic.List[CallInfo]]::new()
         $List.Add($Cloned)
         $Depth++
-        foreach ($Call in $this.$Direction)
+        foreach ($Call in ($this.$Direction | Sort-Object Name, Id))
         {
             $RecursedList = $Call.AsList($Depth, $Direction)
 
