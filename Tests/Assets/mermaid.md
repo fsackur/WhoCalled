@@ -7,7 +7,7 @@ _Developed in `VS Code` with the `bierner.markdown-mermaid` extension._
 ## Diamond
 
 ```mermaid
-graph TD;
+graph LR;
     f1-->f2;
     f1-->f3;
     f2-->f4;

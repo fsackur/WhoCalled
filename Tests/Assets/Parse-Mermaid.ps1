@@ -14,7 +14,7 @@ function Parse-Mermaid
         The test case must start with an h2 heading (i.e. `## <title>'). The title is the name of
         the generated module.
 
-        The test cases are defined by fenced code blocks. The first block must be a mermaid diagram.
+        The test cases are defined by fenced code blocks. The first block must be a mermaid graph.
         Following blocks must start with one or more PS invocations, which begin with `>`, followed
         by any number of empty lines, then the expected output.
 
@@ -57,7 +57,7 @@ function Parse-Mermaid
 
     # Match mermaid code block, dropping the `graph TD` directive, or any other code block with
     # optional PS or plaintext languge directive
-    $Pattern = '(?<=```(mermaid\r?\ngraph TD;|powershell|pwsh|plaintext|)\r?\n).*?(?=\r?\n```)'
+    $Pattern = '(?<=```(mermaid\r?\ngraph (TD|LR);?|powershell|pwsh|plaintext|)\r?\n).*?(?=\r?\n```)'
     $Regex   = [regex]::new($Pattern, 'Singleline')
     foreach ($Chunk in $Chunks)
     {
