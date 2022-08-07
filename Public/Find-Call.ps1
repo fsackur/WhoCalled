@@ -10,22 +10,9 @@ function Find-Call
 
         This command takes a function and builds a tree of functions called by that function.
 
-        .PARAMETER Name
-        Provide the name of a function to analyse.
-
-        .PARAMETER Command
-        Provide a command object as input. This will be the output of Get-Command.
-
-        .PARAMETER Depth
-        Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
-
-        .PARAMETER ResolveAlias
-        Specifies to resolve aliases to the aliased command.
-
-        .PARAMETER All
-        Specifies to return all commands. By default, built-in modules are excluded.
-
         .INPUTS
+
+        [string]
 
         [System.Management.Automation.CommandInfo]
 
@@ -96,26 +83,34 @@ function Find-Call
     [CmdletBinding(DefaultParameterSetName = 'FromCommand', PositionalBinding = $false)]
     param
     (
+        # Provide the name of a function to analyse. Wildcards are accepted.
         [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline, Position = 0)]
         [SupportsWildcards()]
         [string]$Name,
 
+        # Provide a command object as input. This will be the output of Get-Command.
         [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
         [Management.Automation.CommandInfo]$Command,
 
+        # Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
         [ValidateRange(0, 100)]
         [int]$Depth = 4,
 
+        # Specifies to resolve aliases to the aliased command.
         [switch]$ResolveAlias,
 
+        # Specifies to return all commands. By default, built-in modules are excluded.
         [switch]$All,
 
+        # For recursion
         [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
         [CallInfo]$Caller,
 
+        # For recursion
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
 
+        # For detecting loops when recursing
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [Collections.Generic.ISet[string]]$_StackSeen = [Collections.Generic.HashSet[string]]::new()
     )
