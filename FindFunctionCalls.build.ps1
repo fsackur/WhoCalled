@@ -1,5 +1,27 @@
 #requires -Modules @{ModuleName = 'InvokeBuild'; ModuleVersion = '5.9.1'}
 
+param
+(
+    [version]$NewVersion
+)
+
+# Synopsis: Update manifest version
+task UpdateVersion {
+    $ManifestPath = "FindFunctionCalls.psd1"
+    $ManifestContent = Get-Content $ManifestPath -Raw
+    $Manifest = Invoke-Expression "DATA {$ManifestContent}"
+
+    if ($NewVersion -le [version]$Manifest.ModuleVersion)
+    {
+        throw "Can't go backwards: $NewVersion =\=> $($Manifest.ModuleVersion)"
+    }
+
+    $ModuleVersionPattern = "(?<=\n\s*ModuleVersion\s*=\s*(['`"]))(\d+\.)+\d+"
+
+    $ManifestContent = $ManifestContent -replace $ModuleVersionPattern, $NewVersion
+    $ManifestContent | Out-File $ManifestPath -Encoding utf8
+}
+
 # Synopsis: Run PSSA, excluding Tests folder and *.build.ps1
 task PSSA {
     $Files = Get-ChildItem -File -Recurse -Filter *.ps*1 | Where-Object FullName -notmatch '\bTests\b|\.build\.ps1$'
@@ -8,18 +30,23 @@ task PSSA {
     }
 }
 
+# Synopsis: Clean build folder
 task Clean {
     remove Build
 }
 
+# Synopsis: Build module at manifest version
 task Build {
-    $ManifestName = "FindFunctionCalls.psd1"
-    $Manifest = Invoke-Expression "DATA {$(Get-Content -Raw $ManifestName)}"
+    $ManifestPath = "FindFunctionCalls.psd1"
+    $ManifestContent = Get-Content $ManifestPath -Raw
+    $Manifest = Invoke-Expression "DATA {$ManifestContent}"
+
     $Version = $Manifest.ModuleVersion
     $BuildFolder = New-Item "Build/FindFunctionCalls/$Version" -ItemType Directory -Force
-    $BuiltManifestPath = Join-Path $BuildFolder $ManifestName
+    $BuiltManifestPath = Join-Path $BuildFolder $ManifestPath
     $BuiltRootModulePath = Join-Path $BuildFolder $Manifest.RootModule
-    Copy-Item $ManifestName $BuildFolder
+
+    Copy-Item $ManifestPath $BuildFolder
     Copy-Item "README.md" $BuildFolder
     Copy-Item "LICENSE" $BuildFolder
     Copy-Item "FindFunctionCalls.Format.ps1xml" $BuildFolder
@@ -35,6 +62,7 @@ task Build {
         Out-File $BuiltRootModulePath -Encoding utf8NoBOM
 }
 
+# Synopsis: Import latest version of module from build folder
 Task Import {
     Import-Module "$BuildRoot/Build/FindFunctionCalls" -Force -ErrorAction Stop
 }
