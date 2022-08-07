@@ -26,8 +26,7 @@ function Resolve-Command
             }
             catch [Management.Automation.CommandNotFoundException]
             {
-                $_.ErrorDetails = "Command resolution failed for command '$Name'$(if ($ModuleName) {" in module '$ModuleName'"})."
-                Write-Error -ErrorRecord $_
+                Write-Warning "Command resolution failed for command '$Name'$(if ($ModuleName) {" in module '$ModuleName'"})."
             }
             catch
             {
