@@ -7,27 +7,20 @@ BeforeDiscovery {
     # Generate test modules from the mermaid markdown
     $AssetPath = $PSCommandPath | Split-Path | Join-Path -ChildPath Assets
     . (Join-Path $AssetPath Parse-Mermaid.ps1)
-    . (Join-Path $AssetPath Import-TestCase.ps1)
-
-    $ModulePaths = Parse-Mermaid
-    $TestCases   = $ModulePaths | Import-TestCase
+    $TestCasePaths = Parse-Mermaid
 }
 
-Describe "<Name>" -ForEach $TestCases {
+Describe "<_.BaseName>" -ForEach $TestCasePaths {
+
+    BeforeDiscovery {
+        $TestCases = $_.FullName | ForEach-Object {. $_} | Write-Output
+    }
 
     BeforeEach {
         # Clear call cache in the SUT
         & (Get-Module FindFunctionCalls) {if ($CACHE) {$CACHE.Clear()}}
 
-        $Modules = $Modules | Import-Module -PassThru
-
-        # Fix up the version properties on the module commands
-        $VersionField = [Management.Automation.CommandInfo].GetField('_version', 'Instance, NonPublic')
-        $Modules | ForEach-Object {
-            $Module = $_
-            $ModuleCommands = Get-Command -Module $Module
-            $ModuleCommands | ForEach-Object {$VersionField.SetValue($_, $Module.Version)}
-        }
+        $ModulePath | Import-Module
 
         # Do the thing
         $Output = Invoke-Expression "$Invocation -Debug:`$false" | Out-String | ForEach-Object Trim
@@ -37,7 +30,7 @@ Describe "<Name>" -ForEach $TestCases {
         $Expected = $Expected  -replace "$([char]27).*?m" -replace '\r'
     }
 
-    It "<Invocation>" {
+    It "<Invocation>" -TestCases $TestCases {
         try
         {
             $Output | Should -Be $Expected

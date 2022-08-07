@@ -8,6 +8,7 @@ _Developed in `VS Code` with the `bierner.markdown-mermaid` extension._
 
 ```mermaid
 graph LR;
+    Module1(Diamond 0.0);
     f1-->f2;
     f1-->f3;
     f2-->f4;
@@ -101,6 +102,8 @@ Function      Test-CalledFromProfile        0.2.0   Plugz
 
 ```mermaid
 graph LR;
+    Module1(PowerShellGet 2.2.5);
+    Module2(PackageManagement 1.4.7);
     PowerShellGet\Set-ModuleSourcesVariable-->PowerShellGet\Get-PublishLocation;
     PowerShellGet\Add-PackageSource-->PowerShellGet\Get-PublishLocation;
     PowerShellGet\Get-InstalledModuleAuthenticodeSignature-->PowerShellGet\Get-AuthenticodePublisher;

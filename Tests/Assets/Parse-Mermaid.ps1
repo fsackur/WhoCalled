@@ -12,11 +12,15 @@ function Parse-Mermaid
         Each test case generates a module and defines one or more sub-test-cases.
 
         The test case must start with an h2 heading (i.e. `## <title>'). The title is the name of
-        the generated module.
+        the generated test case.
 
         The test cases are defined by fenced code blocks. The first block must be a mermaid graph.
         Following blocks must start with one or more PS invocations, which begin with `>`, followed
         by any number of empty lines, then the expected output.
+
+        Versions of the test modules are defined in the mermaid block by defining a member with
+        module name and version inside round brackets, as follows: `Module1(Foo, 1.2.3)`. The
+        `Module1` label does nothing; it's a necessary bit of mermaid syntax.
 
         NB: the expected output will be processed again, to handle difference in output rendering on
         different systems.
@@ -61,20 +65,20 @@ function Parse-Mermaid
     foreach ($Chunk in $Chunks)
     {
         $Title, $Chunk = $Chunk -split '\n', 2 | ForEach-Object Trim
-
         $MermaidChunk, $Chunks = $Regex.Matches($Chunk).Value | Where-Object Length
-
         $MermaidItems = $MermaidChunk -split '\r?\n' -replace '^\s*' -replace '[\s;]$'
 
-        $SourceVersions = @{}
-        $MermaidItems -match 'Module\d\(' | ForEach-Object {
-            $Name, $Version = $_ -replace 'Module\d\(' -replace '\);?' -split ' '
-            $SourceVersions[$Name] = $Version
-        }
-
+        #region Build function map
         $Sources = [ordered]@{}
-        foreach ($MermaidItem in ($MermaidItems -notmatch 'Module\d\('))
+        $SourceVersions = @{}
+        foreach ($MermaidItem in $MermaidItems)
         {
+            if ($MermaidItem -match 'Module\d\((?<Name>\S+)\s*(?<Version>(\d+\.)+\d+)')
+            {
+                $SourceVersions[$Matches.Name] = $Matches.Version
+                continue
+            }
+
             $Caller, $Call = $MermaidItem -split '-->', 2
             $CallerName, $CallerSource = ($Caller -split '\\')[1,0]
             $CallName, $CallSource = ($Call -split '\\')[1,0]
@@ -92,99 +96,66 @@ function Parse-Mermaid
             $Sources[$CallerSource][$CallerName] += @($CallName)
             $Sources[$CallSource][$CallName] += @()
         }
+        #endregion Build function map
 
         $Builder = [Text.StringBuilder]::new()
+        $ModulePaths = @()
 
-        #region $TestCases
-        # Output something roughly equivalent to:
-        #     $TestCases = @(
-        #         @{
-        #             Invocation = "'f1' | Find-Call"
-        #             Expected   = "<output>"
-        #         }, ...etc...
-        #
-        [void]$Builder.
-            AppendLine('$TestCases = @(').
-            Append('    ')
-
-        $Chunks | ForEach-Object {
-            $Lines      = $_ -split '\r?\n'
-            $Invocation = $Lines.Where({$_ -notmatch '^>'}, 'Until') -replace '^>\s*'
-            $Output     = $Lines.Where({$_ -match '^[^>]'}, 'SkipUntil')
-
-            [void]$Builder.
-                AppendLine('@{').
-                AppendLine("        Invocation = @'").
-                AppendLine($Invocation -join '; ').
-                AppendLine("'@").
-                AppendLine("        Expected   = @'").
-                AppendLine($Output -join "`n").
-                AppendLine("'@").
-                Append('    }, ')
-        }
-
-        $Builder.Length = $Builder.Length - 2   # Drop the trailing comma and space
-        [void]$Builder.
-            AppendLine().
-            AppendLine(')').
-            AppendLine()
-        #endregion $TestCases
-
-        #region function definitions for test input
-        [void]$Builder.
-            AppendLine('$Modules = @{}').
-            AppendLine()
-
-        [void]$Builder.
-            AppendLine('$ModuleVersions = @{')
-
-        foreach ($Kvp in $SourceVersions.GetEnumerator())
-        {
-            [void]$Builder.
-                Append('    ').
-                Append($Kvp.Key).
-                Append(" = '").
-                Append($Kvp.Value).
-                AppendLine("'")
-        }
-
-        [void]$Builder.
-            AppendLine('}').
-            AppendLine()
-
+        #region test module definitions
         foreach ($Kvp in ($Sources.GetEnumerator() | Sort-Object Key))
         {
             $Source, $Functions = $Kvp.Key, $Kvp.Value
 
-            [void]$Builder.
-                Append("`$Modules['").
-                Append($Source).
-                AppendLine("'] = {")
-
             foreach ($Kvp in ($Functions.GetEnumerator() | Sort-Object Key))
             {
                 $Name, $Calls = $Kvp.Key, $Kvp.Value
-                [void]$Builder.
-                    Append('    function ').
-                    Append($Name).
-                    AppendLine(' {')
-                $Calls | ForEach-Object {
-                    [void]$Builder.
-                        Append('        ').
-                        AppendLine($_)
-                }
-                [void]$Builder.
-                    AppendLine('    }')
+                [void]$Builder.Append("function $Name").AppendLine('{')
+                $Calls | ForEach-Object {[void]$Builder.AppendLine("    $_")}
+                [void]$Builder.AppendLine('}')
             }
 
-            [void]$Builder.
-                AppendLine('}').
-                AppendLine()
+            [IO.FileInfo]$RootModulePath = Join-Path $OutPath "$Source.psm1"
+            $Builder.ToString() | Out-File $RootModulePath -Encoding utf8 -Force
+            [void]$Builder.Clear()
+
+
+            [version]$Version = $SourceVersions[$Source]
+            if (-not $Version)
+            {
+                $Version = '0.0'
+            }
+            [IO.FileInfo]$ManifestPath = Join-Path $OutPath "$Source.psd1"
+            New-ModuleManifest -Path $ManifestPath -ModuleVersion $Version -RootModule "$Source.psm1"
+
+            $ModulePaths += $ManifestPath
         }
-        #endregion function definitions for test input
+        #endregion test module definitions
+
+        #region $TestCases
+        # Output hashtables with Invocation, Expected and ModulePath keys
+        $Chunks | ForEach-Object {
+            $Lines      = $_ -split '\r?\n'
+            $Invocation = $Lines.Where({$_ -notmatch '^>'}, 'Until') -replace '^>\s*'
+            $Expected   = $Lines.Where({$_ -match '^[^>]'}, 'SkipUntil')
+
+            [void]$Builder.
+                AppendLine().
+                AppendLine('@{').
+                AppendLine("    ModulePath = '$($ModulePaths -join "', '")'").
+                AppendLine("    Invocation = @'").
+                AppendLine($Invocation -join '; ').
+                AppendLine("'@").
+                AppendLine("    Expected   = @'").
+                AppendLine($Expected -join "`n").
+                AppendLine("'@").
+                Append('},')
+        }
+        $Builder.Length = $Builder.Length - 1   # Drop the trailing comma
 
         [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.ps1"
         $Builder.ToString() | Out-File $_OutPath -Encoding utf8 -Force
+
         $_OutPath
+        #endregion $TestCases
     }
 }

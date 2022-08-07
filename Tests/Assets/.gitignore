@@ -1,3 +1,4 @@
+*.psd1
 *.psm1
 *.ps1
 !Import-TestCase.ps1
