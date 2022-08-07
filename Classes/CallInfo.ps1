@@ -20,8 +20,8 @@ class CallInfo
     [psmoduleinfo]$Module
 
     # This class is a tree node
-    [System.Collections.Generic.IList[CallInfo]]$CalledBy
-    [System.Collections.Generic.IList[CallInfo]]$Calls
+    [Collections.Generic.ISet[CallInfo]]$CalledBy
+    [Collections.Generic.IList[CallInfo]]$Calls
     hidden [int]$Depth
     hidden [bool]$HasNoCalls    # to distinguish from 'not checked yet'
 
@@ -76,7 +76,7 @@ class CallInfo
             Add-Member ScriptProperty -InputObject $this -Name $_ -Value ([scriptblock]::Create("`$this.Command.$_"))
         }
 
-        $this.CalledBy = [Collections.Generic.List[CallInfo]]::new()
+        $this.CalledBy = [Collections.Generic.HashSet[CallInfo]]::new()
         $this.Calls = [Collections.Generic.List[CallInfo]]::new()
         $this.HasNoCalls = $false
 
@@ -141,8 +141,8 @@ class CallInfo
         {
             $RecursedList = $Call.AsList($Depth, $Direction)
 
-            $Cloned.$Direction.Add($Call)
-            $RecursedList[0].$OtherDirection.Add($Cloned)
+            [void]$Cloned.$Direction.Add($Call)
+            [void]$RecursedList[0].$OtherDirection.Add($Cloned)
 
             $List.AddRange($RecursedList)
         }
