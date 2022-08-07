@@ -1,5 +1,29 @@
 function Parse-Mermaid
 {
+    <#
+        .SYNOPSIS
+        Self-testing-documentation parser.
+
+        .DESCRIPTION
+        Parse markdown containing mermaid function call diagrams and example usage code blocks;
+        generate PS module files that declare functions and test cases for use in unit tests.
+
+        .NOTES
+        Each test case generates a module and defines one or more sub-test-cases.
+
+        The test case must start with an h2 heading (i.e. `## <title>'). The title is the name of
+        the generated module.
+
+        The test cases are defined by fenced code blocks. The first block must be a mermaid diagram.
+        Following blocks must start with one or more PS invocations, which begin with `>`, followed
+        by any number of empty lines, then the expected output.
+
+        NB: the expected output will be processed again, to handle difference in output rendering on
+        different systems.
+
+        Trailing whitespace is not allowed.
+    #>
+
     [OutputType([IO.FileInfo])]
     [CmdletBinding()]
     param
@@ -28,19 +52,20 @@ function Parse-Mermaid
 
 
     $Content = Get-Content $Path -Raw
-    $Chunks = $Content -split '(?<=\n)## '
+    $Content = $Content -replace '(?s).*?\n## '
+    $Chunks  = $Content -split '(?<=\n)## '
+
+    # Match mermaid code block, dropping the `graph TD` directive, or any other code block with
+    # optional PS or plaintext languge directive
+    $Pattern = '(?<=```(mermaid\r?\ngraph TD;|powershell|pwsh|plaintext|)\r?\n).*?(?=\r?\n```)'
+    $Regex   = [regex]::new($Pattern, 'Singleline')
     foreach ($Chunk in $Chunks)
     {
         $Title, $Chunk = $Chunk -split '\n', 2 | ForEach-Object Trim
-        if ($Title -match '^#') {continue}  # Get rid of the introduction
 
-        $MermaidChunk, $InvocationChunk, $OutputChunk = $Chunk -split '(?<=\n)### '
-        $EndOfBlock      = '(?s)\s*```.*'
-        $MermaidBlock    = $MermaidChunk    -replace '(?s)^.*?```\s*mermaid\s*graph[^\n]+\s*' -replace $EndOfBlock
-        $InvocationBlock = $InvocationChunk -replace '(?s)^.*?```\s*(powershell|pwsh)?\s*' -replace $EndOfBlock
-        $OutputBlock     = $OutputChunk     -replace '(?s)^.*?```\s*(plaintext)?\s*' -replace $EndOfBlock
+        $MermaidChunk, $Chunks = $Regex.Matches($Chunk).Value | Where-Object Length
 
-        $MermaidItems = $MermaidBlock -split '\r?\n' -replace '[\s;]'
+        $MermaidItems = $MermaidChunk -split '\r?\n' -replace '[\s;]'
         $Functions = [ordered]@{}
         foreach ($MermaidItem in $MermaidItems)
         {
@@ -49,17 +74,44 @@ function Parse-Mermaid
             $Functions[$Call] += @()
         }
 
-        $Builder = [Text.StringBuilder]::new().
-            AppendLine('$TestCase = @{').
-            AppendLine("    Invocation = @'").
-            AppendLine($InvocationBlock).
-            AppendLine("'@").
-            AppendLine("    Expected   = @'").
-            AppendLine($OutputBlock).
-            AppendLine("'@").
-            AppendLine('}').
-            AppendLine()
+        $Builder = [Text.StringBuilder]::new()
 
+        #region $TestCases
+        # Output something roughly equivalent to:
+        #     $TestCases = @(
+        #         @{
+        #             Invocation = "'f1' | Find-Call"
+        #             Expected   = "<output>"
+        #         }, ...etc...
+        #
+        [void]$Builder.
+            AppendLine('$TestCases = @(').
+            Append('    ')
+
+        $Chunks | ForEach-Object {
+            $Lines      = $_ -split '\r?\n'
+            $Invocation = $Lines.Where({$_ -notmatch '^>'}, 'Until') -replace '^>\s*'
+            $Output     = $Lines.Where({$_ -match '^[^>]'}, 'SkipUntil')
+
+            [void]$Builder.
+                AppendLine('@{').
+                AppendLine("        Invocation = @'").
+                AppendLine($Invocation -join '; ').
+                AppendLine("'@").
+                AppendLine("        Expected   = @'").
+                AppendLine($Output -join "`n").
+                AppendLine("'@").
+                Append('    }, ')
+        }
+
+        $Builder.Length = $Builder.Length - 2   # Drop the trailing comma and space
+        [void]$Builder.
+            AppendLine().
+            AppendLine(')').
+            AppendLine()
+        #endregion $TestCases
+
+        #region function definitions for test input
         foreach ($Kvp in $Functions.GetEnumerator())
         {
             $Name, $Calls = $Kvp.Key, $Kvp.Value
@@ -75,6 +127,7 @@ function Parse-Mermaid
             [void]$Builder.
                 AppendLine('}')
         }
+        #endregion function definitions for test input
 
         [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.psm1"
         $Builder.ToString() | Out-File $_OutPath -Encoding utf8 -Force
