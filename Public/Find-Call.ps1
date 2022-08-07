@@ -168,8 +168,6 @@ function Find-Call
         }
 
 
-        [CallInfo[]]$Calls = @()
-
         $Found = $Script:CACHE[$Caller.Id]
         if ($Found)
         {
@@ -178,51 +176,53 @@ function Find-Call
             $Caller = $Found
 
             # The call may have bottomed out on depth when it was first cached.
-            # Absence of calls doesn't mean the command doesn't call anything.
-            $Calls = $Found.Calls | Where-Object {$_ -ne $Caller}   # Don't include recursive calls
-            $Caller.Calls.Clear()
+            # A cache hit saves parsing; it doesn't save recursion.
         }
         else
         {
+            $CallNames = $Command |
+                Where-Object Name |
+                Find-CallNameFromDefinition
+
+            $CallNames |
+                Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
+                Write-Output |
+                Where-Object Id -NE $Caller.Id |     # Don't include recursive calls
+                ForEach-Object {
+                    [void]$_.CalledBy.Add($Caller)
+                    $Caller.Calls.Add($_)
+                }
+
             Write-Debug "$Caller`: caching"
             $Script:CACHE[$Caller.Id] = $Caller
         }
 
-        if (-not $Calls -and -not $Caller.HasNoCalls)
-        {
-            $CallNames = $Command |
-                Where-Object {$_} |
-                Find-CallNameFromDefinition
-
-            $Calls = $CallNames |
-                Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
-                Write-Output |
-                Where-Object {$_ -ne $Caller}   # Don't include recursive calls
-        }
-
-        $Caller.HasNoCalls = -not $Calls
+        $Calls = $Caller.Calls
         if (-not $All)
         {
-            $Calls = $Calls | Where-Object {$_.Source -notmatch '^Microsoft.PowerShell'}
+            $Calls = $Calls | Where-Object Source -notmatch '^Microsoft.PowerShell'
         }
 
 
-        $_CallDepth++
-        $RecurseParams = @{}
-        Get-Variable 'Depth', 'ResolveAlias', 'All', '_CallDepth', '_StackSeen' |
-            ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
-
-        $Calls | Where-Object Name | ForEach-Object {
-            [void]$_.CalledBy.Add($Caller)
-            $Caller.Calls.Add($_)
-
-            $_ | Find-Call @RecurseParams
+        if ($Calls)
+        {
+            $RecurseParams = @{
+                Depth        = $Depth
+                ResolveAlias = $ResolveAlias
+                All          = $All
+                _CallDepth   = $_CallDepth + 1
+                _StackSeen   = $_StackSeen
+            }
+            $Calls | Find-Call @RecurseParams
         }
 
 
         if ($PSCmdlet.ParameterSetName -ne 'Recursing')
         {
-            $Caller.AsList(0, 'Calls') | Where-Object Depth -le $Depth
+            $Caller.AsList(0, 'Calls') | Where-Object {
+                $_.Depth -le $Depth -and
+                ($All -or $_.Source -notmatch '^Microsoft.PowerShell')
+            }
         }
     }
 }
