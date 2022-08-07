@@ -18,8 +18,6 @@ environment:
 
 init:
 - pwsh: |
-    ./install-build-dependencies.ps1
-
     if ($env:APPVEYOR_REPO_TAG -eq 'true')
     {
         [version]$Version = $env:APPVEYOR_REPO_TAG_NAME -replace '^\D*' -replace '\D*$'
@@ -30,6 +28,8 @@ init:
 
 build_script:
 - pwsh: |
+    ./install-build-dependencies.ps1
+
     Invoke-Build
 
 artifacts:
