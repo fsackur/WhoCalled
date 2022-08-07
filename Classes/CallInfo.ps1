@@ -23,7 +23,6 @@ class CallInfo
     [Collections.Generic.ISet[CallInfo]]$CalledBy
     [Collections.Generic.IList[CallInfo]]$Calls
     hidden [int]$Depth
-    hidden [bool]$HasNoCalls    # to distinguish from 'not checked yet'
 
     # Inner object; we'll delegate calls to this
     hidden [Management.Automation.CommandInfo]$Command
@@ -78,7 +77,6 @@ class CallInfo
 
         $this.CalledBy = [Collections.Generic.HashSet[CallInfo]]::new()
         $this.Calls = [Collections.Generic.List[CallInfo]]::new()
-        $this.HasNoCalls = $false
 
         $this.Id = switch ($this.CommandType)
         {
@@ -131,7 +129,6 @@ class CallInfo
         [CallDirection]$OtherDirection = [int](-not $Direction)
 
         $Cloned = if ($this.Command) {[CallInfo]$this.Command} else {[CallInfo]$this.Name}
-        $Cloned.HasNoCalls = $this.HasNoCalls
         $Cloned.Depth = $Depth
 
         $List = [System.Collections.Generic.List[CallInfo]]::new()
