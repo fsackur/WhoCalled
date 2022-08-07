@@ -129,6 +129,7 @@ function Find-Call
 
     process
     {
+        #region Unify parameter sets
         if ($PSCmdlet.ParameterSetName -eq 'ByName')
         {
             $Params = [hashtable]$PSBoundParameters
@@ -144,8 +145,9 @@ function Find-Call
         {
             $Caller = [CallInfo]$Command
         }
+        #endregion Unify parameter sets
 
-
+        #region Early exit conditions
         $_StackSeen = [Collections.Generic.HashSet[string]]::new($_StackSeen)
         if (-not $_StackSeen.Add($Caller.Id))
         {
@@ -166,17 +168,17 @@ function Find-Call
             Write-Debug $Message
             return
         }
+        #endregion Early exit conditions
 
-
+        #region Cache hit or parse and cache
+        # The call may have bottomed out on depth when it was first cached.
+        # A cache hit saves parsing; it doesn't save recursion.
         $Found = $Script:CACHE[$Caller.Id]
         if ($Found)
         {
             Write-Debug "$Caller`: cache hit"
             $Caller.CalledBy | ForEach-Object {[void]$Found.CalledBy.Add($_)}
             $Caller = $Found
-
-            # The call may have bottomed out on depth when it was first cached.
-            # A cache hit saves parsing; it doesn't save recursion.
         }
         else
         {
@@ -196,13 +198,14 @@ function Find-Call
             Write-Debug "$Caller`: caching"
             $Script:CACHE[$Caller.Id] = $Caller
         }
+        #endregion Cache hit or parse and cache
 
+        #region Recurse
         $Calls = $Caller.Calls
         if (-not $All)
         {
             $Calls = $Calls | Where-Object Source -notmatch '^Microsoft.PowerShell'
         }
-
 
         if ($Calls)
         {
@@ -215,8 +218,9 @@ function Find-Call
             }
             $Calls | Find-Call @RecurseParams
         }
+        #endregion Recurse
 
-
+        #region Output
         if ($PSCmdlet.ParameterSetName -ne 'Recursing')
         {
             $Caller.AsList(0, 'Calls') | Where-Object {
@@ -224,5 +228,6 @@ function Find-Call
                 ($All -or $_.Source -notmatch '^Microsoft.PowerShell')
             }
         }
+        #endregion Output
     }
 }
