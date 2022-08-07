@@ -174,7 +174,7 @@ function Find-Call
         if ($Found)
         {
             Write-Debug "$Caller`: cache hit"
-            $Caller.CalledBy | Where-Object {$_ -notin $Found.CalledBy} | ForEach-Object {$Found.CalledBy.Add($_)}
+            $Caller.CalledBy | ForEach-Object {[void]$Found.CalledBy.Add($_)}
             $Caller = $Found
 
             # The call may have bottomed out on depth when it was first cached.
@@ -213,10 +213,7 @@ function Find-Call
             ForEach-Object {$RecurseParams.Add($_.Name, $_.Value)}
 
         $Calls | Where-Object Name | ForEach-Object {
-            if ($Caller -notin $_.CalledBy)
-            {
-                $_.CalledBy.Add($Caller)
-            }
+            [void]$_.CalledBy.Add($Caller)
             $Caller.Calls.Add($_)
 
             $_ | Find-Call @RecurseParams
