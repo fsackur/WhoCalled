@@ -1,5 +1,9 @@
 # FindFunctionCalls
 
+## 1.4.5
+
+- Build in Appveyor
+
 ## 1.4.4
 
 - Fix calls not getting added to top-level caller
