@@ -207,11 +207,13 @@ function Find-Call
         if ($Calls)
         {
             $RecurseParams = @{
-                Depth        = $Depth
-                ResolveAlias = $ResolveAlias
-                All          = $All
-                _CallDepth   = $_CallDepth + 1
-                _StackSeen   = $_StackSeen
+                Depth           = $Depth
+                ResolveAlias    = $ResolveAlias
+                All             = $All
+                _CallDepth      = $_CallDepth + 1
+                _StackSeen      = $_StackSeen
+                WarningAction   = 'SilentlyContinue'
+                WarningVariable = 'Warnings'
             }
             $Calls | Find-Call @RecurseParams
         }
@@ -220,6 +222,11 @@ function Find-Call
         #region Output
         if ($PSCmdlet.ParameterSetName -ne 'Recursing')
         {
+            if ($Warnings)
+            {
+                $Warnings | Sort-Object -Unique | Write-Warning
+            }
+
             $Caller.AsList(0, 'Calls') | Where-Object {
                 $_.Depth -le $Depth -and
                 ($All -or $_.Source -notmatch '^Microsoft.PowerShell')
