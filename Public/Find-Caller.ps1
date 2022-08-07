@@ -91,9 +91,23 @@ function Find-Caller
 
     begin
     {
-        $Modules = $Module | ForEach-Object {
+        $ToImport = @()
+        [psmoduleinfo[]]$Modules = $Module | ForEach-Object {
             $_Module = Get-Module $_ -ErrorAction Ignore
-            if ($_Module) {$_Module} else {Import-Module $_ -PassThru}
+            if ($_Module) {$_Module} else {$ToImport += $_}
+        }
+
+        if ($ToImport)
+        {
+            $i = 0
+            $Activity = "Importing modules"
+            Write-Progress -Activity $Activity -PercentComplete 0
+            $ToImport | ForEach-Object {
+                $Percent = 100 * $i++ / $ToImport.Count
+                Write-Progress -Activity $Activity -Status $_ -PercentComplete $Percent
+                $Modules += Import-Module $_ -PassThru
+            }
+            Write-Progress -Activity $Activity -Completed
         }
 
         $Commands = $Modules | ForEach-Object {
@@ -112,7 +126,16 @@ function Find-Caller
             WarningAction   = 'SilentlyContinue'
             WarningVariable = 'Warnings'
         }
-        $Commands | Find-Call @Params
+
+        $i = 0
+        $Activity = "Finding function calls"
+        $Commands | ForEach-Object {
+            $Percent = 100 * $i++ / $Commands.Count
+            Write-Progress -Activity $Activity -Status $_ -PercentComplete $Percent
+            Find-Call $_ @Params
+        } -End {
+            Write-Progress -Activity $Activity -Completed
+        }
 
         if ($Warnings)
         {
