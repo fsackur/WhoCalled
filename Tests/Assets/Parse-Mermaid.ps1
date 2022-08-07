@@ -52,8 +52,7 @@ function Parse-Mermaid
 
 
     $Content = Get-Content $Path -Raw
-    $Content = $Content -replace '(?s).*?\n## '
-    $Chunks  = $Content -split '(?<=\n)## '
+    $Chunks  = $Content -split '(?<=\n)## ' | Select-Object -Skip 1
 
     # Match mermaid code block, dropping the `graph TD` directive, or any other code block with
     # optional PS or plaintext languge directive
@@ -65,13 +64,32 @@ function Parse-Mermaid
 
         $MermaidChunk, $Chunks = $Regex.Matches($Chunk).Value | Where-Object Length
 
-        $MermaidItems = $MermaidChunk -split '\r?\n' -replace '[\s;]'
-        $Functions = [ordered]@{}
-        foreach ($MermaidItem in $MermaidItems)
+        $MermaidItems = $MermaidChunk -split '\r?\n' -replace '^\s*' -replace '[\s;]$'
+
+        $SourceVersions = @{}
+        $MermaidItems -match 'Module\d\(' | ForEach-Object {
+            $Name, $Version = $_ -replace 'Module\d\(' -replace '\);?' -split ' '
+            $SourceVersions[$Name] = $Version
+        }
+
+        $Sources = [ordered]@{}
+        foreach ($MermaidItem in ($MermaidItems -notmatch 'Module\d\('))
         {
             $Caller, $Call = $MermaidItem -split '-->', 2
-            $Functions[$Caller] += @($Call)
-            $Functions[$Call] += @()
+            $CallerName, [string]$CallerSource = ($Caller -split '\\')[1,0]
+            $CallName, [string]$CallSource = ($Call -split '\\')[1,0]
+
+            if (-not $Sources[$CallerSource])
+            {
+                $Sources[$CallerSource] = @{}
+            }
+            if (-not $Sources[$CallSource])
+            {
+                $Sources[$CallSource] = @{}
+            }
+
+            $Sources[$CallerSource][$CallerName] += @($CallName)
+            $Sources[$CallSource][$CallName] += @()
         }
 
         $Builder = [Text.StringBuilder]::new()
@@ -112,20 +130,55 @@ function Parse-Mermaid
         #endregion $TestCases
 
         #region function definitions for test input
-        foreach ($Kvp in $Functions.GetEnumerator())
+        [void]$Builder.
+            AppendLine('$Modules = @{}').
+            AppendLine()
+
+        [void]$Builder.
+            AppendLine('$ModuleVersions = @{')
+
+        foreach ($Kvp in $SourceVersions.GetEnumerator())
         {
-            $Name, $Calls = $Kvp.Key, $Kvp.Value
             [void]$Builder.
-                Append('function ').
-                Append($Name).
-                AppendLine(' {')
-            $Calls | ForEach-Object {
+                Append('    ').
+                Append($Kvp.Key).
+                Append(" = '").
+                Append($Kvp.Value).
+                AppendLine("'")
+        }
+
+        [void]$Builder.
+            AppendLine('}').
+            AppendLine()
+
+        foreach ($Kvp in ($Sources.GetEnumerator() | Sort-Object Key))
+        {
+            $Source, $Functions = $Kvp.Key, $Kvp.Value
+
+            [void]$Builder.
+                Append("`$Modules['").
+                Append($Source).
+                AppendLine("'] = {")
+
+            foreach ($Kvp in ($Functions.GetEnumerator() | Sort-Object Key))
+            {
+                $Name, $Calls = $Kvp.Key, $Kvp.Value
                 [void]$Builder.
-                    Append('    ').
-                    AppendLine($_)
+                    Append('    function ').
+                    Append($Name).
+                    AppendLine(' {')
+                $Calls | ForEach-Object {
+                    [void]$Builder.
+                        Append('        ').
+                        AppendLine($_)
+                }
+                [void]$Builder.
+                    AppendLine('    }')
             }
+
             [void]$Builder.
-                AppendLine('}')
+                AppendLine('}').
+                AppendLine()
         }
         #endregion function definitions for test input
 
