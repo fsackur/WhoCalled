@@ -7,33 +7,37 @@ BeforeDiscovery {
     # Generate test modules from the mermaid markdown
     $AssetPath = $PSCommandPath | Split-Path | Join-Path -ChildPath Assets
     . (Join-Path $AssetPath Parse-Mermaid.ps1)
-    $ModulePaths = Parse-Mermaid
+    . (Join-Path $AssetPath Import-TestCase.ps1)
 
-    # Read test cases from the generated test modules
-    $TestCases   = $ModulePaths | ForEach-Object {
-        @{
-            Name = $_.BaseName
-            Path = $_
-        }
-    }
+    $ModulePaths = Parse-Mermaid
+    $TestCases   = $ModulePaths | Import-TestCase
 }
 
 Describe "<Name>" -ForEach $TestCases {
 
-    BeforeDiscovery {
-        $ModuleTestCases = $_ | ForEach-Object {
-            $Module = Import-Module $Path -PassThru -Force
-            & $Module {$TestCases}
-        }
-    }
-
     BeforeEach {
+        # Clear call cache in the SUT
+        & (Get-Module FindFunctionCalls) {if ($CACHE) {$CACHE.Clear()}}
+
+        $Modules = $Modules | Import-Module -PassThru
+
+        # Fix up the version properties on the module commands
+        $VersionField = [Management.Automation.CommandInfo].GetField('_version', 'Instance, NonPublic')
+        $Modules | ForEach-Object {
+            $Module = $_
+            $ModuleCommands = Get-Command -Module $Module
+            $ModuleCommands | ForEach-Object {$VersionField.SetValue($_, $Module.Version)}
+        }
+
+        # Do the thing
         $Output = Invoke-Expression "$Invocation -Debug:`$false" | Out-String | ForEach-Object Trim
+
+        # Strip ANSI control codes
         $Output = $Output -replace "$([char]27).*?m" -replace '\r'
         $Expected = $Expected  -replace "$([char]27).*?m" -replace '\r'
     }
 
-    It "<Invocation>" -ForEach $ModuleTestCases {
+    It "<Invocation>" {
         try
         {
             $Output | Should -Be $Expected

@@ -76,8 +76,9 @@ function Parse-Mermaid
         foreach ($MermaidItem in ($MermaidItems -notmatch 'Module\d\('))
         {
             $Caller, $Call = $MermaidItem -split '-->', 2
-            $CallerName, [string]$CallerSource = ($Caller -split '\\')[1,0]
-            $CallName, [string]$CallSource = ($Call -split '\\')[1,0]
+            $CallerName, $CallerSource = ($Caller -split '\\')[1,0]
+            $CallName, $CallSource = ($Call -split '\\')[1,0]
+            $CallerSource, $CallSource = $CallerSource, $CallSource -replace '^$', $Title
 
             if (-not $Sources[$CallerSource])
             {
@@ -182,7 +183,7 @@ function Parse-Mermaid
         }
         #endregion function definitions for test input
 
-        [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.psm1"
+        [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.ps1"
         $Builder.ToString() | Out-File $_OutPath -Encoding utf8 -Force
         $_OutPath
     }

@@ -1,2 +1,4 @@
 *.psm1
+*.ps1
+!Import-TestCase.ps1
 !Parse-Mermaid.ps1
