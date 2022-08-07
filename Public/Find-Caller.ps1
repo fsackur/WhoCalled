@@ -105,7 +105,19 @@ function Find-Caller
             $Commands += Get-Command -CommandType Function | Where-Object Module -eq $null
         }
 
-        $Commands | Find-Call -NoOutput -Depth $Depth -WarningAction Ignore
+        $Params = @{
+            NoOutput        = $true     # Only populate cache
+            ResolveAlias    = $true
+            Depth           = $Depth
+            WarningAction   = 'SilentlyContinue'
+            WarningVariable = 'Warnings'
+        }
+        $Commands | Find-Call @Params
+
+        if ($Warnings)
+        {
+            $Warnings | Sort-Object -Unique | Write-Warning
+        }
     }
 
     process
