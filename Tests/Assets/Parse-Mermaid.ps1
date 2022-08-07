@@ -34,10 +34,14 @@ function Parse-Mermaid
         $Title, $Chunk = $Chunk -split '\n', 2 | ForEach-Object Trim
         if ($Title -match '^#') {continue}  # Get rid of the introduction
 
-        $Functions = [ordered]@{}
+        $MermaidChunk, $InvocationChunk, $OutputChunk = $Chunk -split '(?<=\n)### '
+        $EndOfBlock      = '(?s)\s*```.*'
+        $MermaidBlock    = $MermaidChunk    -replace '(?s)^.*?```\s*mermaid\s*graph[^\n]+\s*' -replace $EndOfBlock
+        $InvocationBlock = $InvocationChunk -replace '(?s)^.*?```\s*(powershell|pwsh)?\s*' -replace $EndOfBlock
+        $OutputBlock     = $OutputChunk     -replace '(?s)^.*?```\s*(plaintext)?\s*' -replace $EndOfBlock
 
-        $MermaidBlock = $Chunk -replace '(?s)```\s*mermaid\r?\n\s*graph[^\n]+\n' -replace '(?s)\s*```.*'
         $MermaidItems = $MermaidBlock -split '\r?\n' -replace '[\s;]'
+        $Functions = [ordered]@{}
         foreach ($MermaidItem in $MermaidItems)
         {
             $Caller, $Call = $MermaidItem -split '-->', 2
@@ -45,14 +49,33 @@ function Parse-Mermaid
             $Functions[$Call] += @()
         }
 
-        $Builder = [Text.StringBuilder]::new()
+        $Builder = [Text.StringBuilder]::new().
+            AppendLine('$TestCase = @{').
+            AppendLine("    Invocation = @'").
+            AppendLine($InvocationBlock).
+            AppendLine("'@").
+            AppendLine("    Expected   = @'").
+            AppendLine($OutputBlock).
+            AppendLine("'@").
+            AppendLine('}').
+            AppendLine()
+
         foreach ($Kvp in $Functions.GetEnumerator())
         {
             $Name, $Calls = $Kvp.Key, $Kvp.Value
-            [void]$Builder.Append('function ').Append($Name).AppendLine(' {')
-            $Calls | ForEach-Object {[void]$Builder.Append('    ').AppendLine($_)}
-            [void]$Builder.AppendLine('}')
+            [void]$Builder.
+                Append('function ').
+                Append($Name).
+                AppendLine(' {')
+            $Calls | ForEach-Object {
+                [void]$Builder.
+                    Append('    ').
+                    AppendLine($_)
+            }
+            [void]$Builder.
+                AppendLine('}')
         }
+
         [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.psm1"
         $Builder.ToString() | Out-File $_OutPath -Encoding utf8 -Force
         $_OutPath
