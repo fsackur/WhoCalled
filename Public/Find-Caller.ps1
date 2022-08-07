@@ -41,7 +41,7 @@ function Find-Caller
         commands.
 
         .EXAMPLE
-        Find-Caller Import-* -Module Plugz, Metadata, Configuration -Depth 2 -IncludeCurrentScope
+        Find-Caller Import-* -Module Plugz, Metadata, Configuration, '' -Depth 2
 
         CommandType Name                            Version Source
         ----------- ----                            ------- ------
@@ -56,10 +56,15 @@ function Find-Caller
         Function    Import-Plugz                    0.2.0   Plugz
         Function    Import-ParameterConfiguration   1.5.1   Configuration
         Function    Import-GitModule
+        Function      Import-CommonModule
 
         Find calls made to any commands matching 'Import-*' from commands in the Plugz, Metadata, or
         Configuration modules, or from commands in the current scope that are not exported from any
         module. Depth is limited to 2.
+
+        The module parameter includes an empty string argument. This causes the search to include
+        functions that are not defined in a module; in this case, the 'Import-GitModule' and
+        'Import-CommonModule' functions, which are defined in the user's profile.
 
         Note that the modules will be imported.
     #>
@@ -74,15 +79,11 @@ function Find-Caller
         [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
         [Management.Automation.CommandInfo]$Command,
 
-        # Modules to search for callers.
+        # Modules to search for callers. Include a null or an empty string to include functions that
+        # are not defined in a module.
         [Parameter(Mandatory, Position = 1)]
-        [ValidateNotNullOrEmpty()]
+        [AllowEmptyString()]
         [string[]]$Module,
-
-        # Include functions from the parent scope.
-        # Note that this will not include module functions when this command is called from a module
-        # that did not import this command's module.
-        [switch]$IncludeCurrentScope,
 
         # Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
         [ValidateRange(0, 100)]
@@ -91,6 +92,9 @@ function Find-Caller
 
     begin
     {
+        $Module = $Module | Where-Object Length
+        $IncludeCurrentScope = $Module.Count -ne $PSBoundParameters.Module.Count
+
         $ToImport = @()
         [psmoduleinfo[]]$Modules = $Module | ForEach-Object {
             $_Module = Get-Module $_ -ErrorAction Ignore
