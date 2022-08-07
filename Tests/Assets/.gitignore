@@ -1,0 +1,2 @@
+*.psm1
+!Parse-Mermaid.ps1
