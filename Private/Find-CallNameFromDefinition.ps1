@@ -1,5 +1,10 @@
 function Find-CallNameFromDefinition
 {
+    <#
+        .DESCRIPTION
+        Parse a function definition to find all commands called from the function.
+    #>
+
     [OutputType([string[]])]
     [CmdletBinding(DefaultParameterSetName = 'FromFunction')]
     param

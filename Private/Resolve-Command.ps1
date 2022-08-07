@@ -1,5 +1,13 @@
 function Resolve-Command
 {
+    <#
+        .DESCRIPTION
+        Find commands. Aliases are optionally resolved to the command they alias.
+
+        If a module is provided, and it is not null, command resolution is done in the module's
+        scope. This allows resolution of private commands.
+    #>
+
     [OutputType([CallInfo[]])]
     [CmdletBinding()]
     param
