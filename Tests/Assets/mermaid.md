@@ -104,6 +104,15 @@ Function      Test-CalledFromProfile        0.2.0   Plugz
 graph LR;
     Module1(PowerShellGet 2.2.5);
     Module2(PackageManagement 1.4.7);
+    PowerShellGet\Install-Module-->PowerShellGet\Get-ProviderName;
+    PowerShellGet\Install-Module-->PowerShellGet\Get-PSRepository;
+    PowerShellGet\Install-Module-->PowerShellGet\Install-NuGetClientBinaries;
+    PowerShellGet\Install-Module-->PackageManagement\Install-Package;
+    PowerShellGet\Install-Module-->PowerShellGet\New-PSGetItemInfo;
+    PowerShellGet\Install-Module-->PowerShellGet\Test-ModuleInstalled;
+    PowerShellGet\Install-Module-->PowerShellGet\Test-RunningAsElevated;
+    PowerShellGet\Install-Module-->PowerShellGet\ThrowError;
+    PowerShellGet\Install-Module-->PowerShellGet\Validate-VersionParameters;
     PowerShellGet\Set-ModuleSourcesVariable-->PowerShellGet\Get-PublishLocation;
     PowerShellGet\Add-PackageSource-->PowerShellGet\Get-PublishLocation;
     PowerShellGet\Get-InstalledModuleAuthenticodeSignature-->PowerShellGet\Get-AuthenticodePublisher;
