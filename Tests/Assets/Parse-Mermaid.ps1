@@ -75,14 +75,16 @@ function Parse-Mermaid
         {
             if ($MermaidItem -match 'Module\d\((?<Name>\S+)\s*(?<Version>(\d+\.)+\d+)')
             {
-                $SourceVersions[$Matches.Name] = $Matches.Version
+                $SourceVersions[$Matches.Name -replace '^', '_'] = $Matches.Version
                 continue
             }
 
             $Caller, $Call = $MermaidItem -split '-->', 2
             $CallerName, $CallerSource = ($Caller -split '\\')[1,0]
             $CallName, $CallSource = ($Call -split '\\')[1,0]
-            $CallerSource, $CallSource = $CallerSource, $CallSource -replace '^$', $Title
+            $CallerSource, $CallSource = $CallerSource, $CallSource -replace '^$', $Title -replace '^', '_'
+
+            $CallerName, $CallName = $CallerName, $CallName -replace '^', '_'
 
             if (-not $Sources[$CallerSource])
             {
@@ -138,15 +140,24 @@ function Parse-Mermaid
             $Invocation = $Lines.Where({$_ -notmatch '^>'}, 'Until') -replace '^>\s*'
             $Expected   = $Lines.Where({$_ -match '^[^>]'}, 'SkipUntil')
 
+            $Invocation = $Invocation -replace '\b(?<!-)(?!Find-Call)(?=[a-z])', '_' -join '; '
+            $Expected = (
+                ($Expected[0] -replace 'Name', 'Name '),
+                ($Expected[1] -replace '(?<=^-+ +-+) ', '  '),
+                (
+                    $Expected[2..$Expected.Count] -replace '(?<=^\w+\s+)(?=[a-z])', '_' -replace '(?<=\s)(?=\w+$)', '_'
+                )
+            ) | Out-String | ForEach-Object Trim
+
             [void]$Builder.
                 AppendLine().
                 AppendLine('@{').
                 AppendLine("    ModulePath = '$($ModulePaths -join "', '")'").
                 AppendLine("    Invocation = @'").
-                AppendLine($Invocation -join '; ').
+                AppendLine($Invocation).
                 AppendLine("'@").
                 AppendLine("    Expected   = @'").
-                AppendLine($Expected -join "`n").
+                AppendLine($Expected).
                 AppendLine("'@").
                 Append('},')
         }
