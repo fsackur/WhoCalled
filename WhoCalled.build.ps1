@@ -7,7 +7,7 @@ param
 
 # Synopsis: Update manifest version
 task UpdateVersion {
-    $ManifestPath = "FindFunctionCalls.psd1"
+    $ManifestPath = "WhoCalled.psd1"
     $ManifestContent = Get-Content $ManifestPath -Raw
     $Manifest = Invoke-Expression "DATA {$ManifestContent}"
 
@@ -37,19 +37,19 @@ task Clean {
 
 # Synopsis: Build module at manifest version
 task Build {
-    $ManifestPath = "FindFunctionCalls.psd1"
+    $ManifestPath = "WhoCalled.psd1"
     $ManifestContent = Get-Content $ManifestPath -Raw
     $Manifest = Invoke-Expression "DATA {$ManifestContent}"
 
     $Version = $Manifest.ModuleVersion
-    $BuildFolder = New-Item "Build/FindFunctionCalls/$Version" -ItemType Directory -Force
+    $BuildFolder = New-Item "Build/WhoCalled/$Version" -ItemType Directory -Force
     $BuiltManifestPath = Join-Path $BuildFolder $ManifestPath
     $BuiltRootModulePath = Join-Path $BuildFolder $Manifest.RootModule
 
     Copy-Item $ManifestPath $BuildFolder
     Copy-Item "README.md" $BuildFolder
     Copy-Item "LICENSE" $BuildFolder
-    Copy-Item "FindFunctionCalls.Format.ps1xml" $BuildFolder
+    Copy-Item "WhoCalled.Format.ps1xml" $BuildFolder
 
     'Classes', 'Public' | ForEach-Object {
         "",
@@ -64,7 +64,7 @@ task Build {
 
 # Synopsis: Import latest version of module from build folder
 Task Import {
-    Import-Module "$BuildRoot/Build/FindFunctionCalls" -Force -ErrorAction Stop
+    Import-Module "$BuildRoot/Build/WhoCalled" -Force -ErrorAction Stop
 }
 
 task . Clean, Build, Import

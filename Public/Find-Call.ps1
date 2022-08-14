@@ -1,4 +1,4 @@
-function Find-FunctionCall
+function Find-Call
 {
     <#
         .SYNOPSIS
@@ -10,34 +10,21 @@ function Find-FunctionCall
 
         This command takes a function and builds a tree of functions called by that function.
 
-        .PARAMETER Name
-        Provide the name of a function to analyse.
-
-        .PARAMETER Function
-        Provide a function object as input. This will be the output of Get-Command.
-
-        .PARAMETER Depth
-        Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
-
-        .PARAMETER ResolveAlias
-        Specifies to resolve aliases to the aliased command.
-
-        .PARAMETER All
-        Specifies to return all commands. By default, built-in modules are excluded.
-
         .INPUTS
 
-        [System.Management.Automation.FunctionInfo]
+        [string]
+
+        [System.Management.Automation.CommandInfo]
 
         .OUTPUTS
 
-        [FunctionCallInfo]
+        [CallInfo]
 
-        This command outputs an object similar to System.Management.Automation.FunctionInfo. Note
-        that this is not a child class of FunctionInfo.
+        This command outputs an object similar to System.Management.Automation.CommandInfo. Note
+        that this is not a child class of CommandInfo.
 
         .EXAMPLE
-        Find-FunctionCall Install-Module
+        Find-Call Install-Module
 
         CommandType Name                                          Version Source
         ----------- ----                                          ------- ------
@@ -61,7 +48,7 @@ function Find-FunctionCall
         For the 'Install-Module' command from the PowerShellGet module, determine the call tree.
 
         .EXAMPLE
-        Find-FunctionCall Import-Plugz -Depth 2 -ResolveAlias -All
+        Find-Call Import-Plugz -Depth 2 -ResolveAlias -All
 
         WARNING: Resulting output is truncated as call tree has exceeded the set depth of 2.
         CommandType Name                     Version   Source
@@ -90,157 +77,165 @@ function Find-FunctionCall
         included. Aliases are resolved to the resolved commands.
     #>
 
-    [OutputType([FunctionCallInfo[]])]
-    [CmdletBinding(DefaultParameterSetName = 'FromFunction', PositionalBinding = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSReviewUnusedParameter', 'All', Justification = "It's used in a scriptblock")]
+
+    [OutputType([CallInfo[]])]
+    [CmdletBinding(DefaultParameterSetName = 'FromCommand', PositionalBinding = $false)]
     param
     (
+        # Provide the name of a function to analyse. Wildcards are accepted.
         [Parameter(ParameterSetName = 'ByName', Mandatory, ValueFromPipeline, Position = 0)]
+        [SupportsWildcards()]
         [string]$Name,
 
-        [Parameter(ParameterSetName = 'FromFunction', Mandatory, ValueFromPipeline, Position = 0)]
-        [Management.Automation.FunctionInfo]$Function,
+        # Provide a command object as input. This will be the output of Get-Command.
+        [Parameter(ParameterSetName = 'FromCommand', Mandatory, ValueFromPipeline, Position = 0)]
+        [Management.Automation.CommandInfo]$Command,
 
+        # Maximum level of nesting to analyse. If this depth is exceeded, a warning will be emitted.
+        [ValidateRange(0, 100)]
         [int]$Depth = 4,
 
+        # Specifies to resolve aliases to the aliased command.
         [switch]$ResolveAlias,
 
+        # Specifies to return all commands. By default, built-in modules are excluded.
         [switch]$All,
 
-        [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
-        [IFunctionCallInfo]$CallingFunction,
+        # Only populate the cache
+        [Parameter(DontShow)]
+        [switch]$NoOutput,
 
+        # For recursion
+        [Parameter(DontShow, ParameterSetName = 'Recursing', Mandatory, ValueFromPipeline)]
+        [CallInfo]$Caller,
+
+        # For recursion
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
         [int]$_CallDepth = 0,
 
+        # For detecting loops when recursing
         [Parameter(DontShow, ParameterSetName = 'Recursing')]
-        [Collections.Generic.ISet[Management.Automation.FunctionInfo]]$_SeenFunctions = [Collections.Generic.HashSet[Management.Automation.FunctionInfo]]::new()
+        [Collections.Generic.ISet[string]]$_StackSeen = [Collections.Generic.HashSet[string]]::new()
     )
+
+    begin
+    {
+        if (-not $Script:CACHE)
+        {
+            $Script:CACHE = [Collections.Generic.Dictionary[string, CallInfo]]::new()
+        }
+    }
 
     process
     {
-        if ($_CallDepth -ge $Depth)
-        {
-            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth."
-            return
-        }
-
-
+        #region Unify parameter sets
         if ($PSCmdlet.ParameterSetName -eq 'ByName')
         {
-            $Function = Get-Command $Name -CommandType Function -ErrorAction Stop
+            $Params = [hashtable]$PSBoundParameters
+            $Params.Remove('Name')
+            return Get-Command $Name -ErrorAction Stop | Find-Call @Params
         }
 
         if ($PSCmdlet.ParameterSetName -eq 'Recursing')
         {
-            $Function = $CallingFunction.Command
+            $Command = $Caller.Command
         }
         else
         {
-            $CallingFunction = [FunctionCallInfo]$Function
+            $Caller = [CallInfo]$Command
         }
+        #endregion Unify parameter sets
 
-        # Returns false if already in set
-        if (-not $_SeenFunctions.Add($Function))
+        #region Early exit conditions
+        $_StackSeen = [Collections.Generic.HashSet[string]]::new($_StackSeen)
+        if (-not $_StackSeen.Add($Caller.Id))
         {
+            Write-Debug "Already seen: $Caller"
             return
         }
 
-        if (-not $_CallDepth)
+        if ($_CallDepth -ge $Depth)
         {
-            $CallingFunction
+            Write-Warning "Resulting output is truncated as call tree has exceeded the set depth of $Depth`: $Caller"
+            # ...since we always return the original caller, return it when depth is 0...
+            if ($Depth -eq 0) {return $Caller} else {return}
         }
 
-
-        #region Parse
-        $Def = "function $($Function.Name) {$($Function.Definition)}"
-        $Tokens = @()
-        [void][Management.Automation.Language.Parser]::ParseInput($Def, [ref]$Tokens, [ref]$null)
-
-
-        $CommandTokens = $Tokens | Where-Object {$_.TokenFlags -band 'CommandName'}
-        $CalledCommandNames = $CommandTokens.Text | Sort-Object -Unique
-        if (-not $CalledCommandNames)
+        if (-not ($Command -as [Management.Automation.FunctionInfo]))
         {
+            $Message = if ($Command) {"Not a function, cannot parse for calls: $Caller"} else {"Command not found: $Caller"}
+            Write-Verbose $Message
+            Write-Debug $Message
             return
         }
-        #endregion Parse
+        #endregion Early exit conditions
 
-        #region Resolve commands
-        $Resolver = {
-            param ([string[]]$CommandNames, [string]$ModuleName, [switch]$ResolveAlias)
-
-            foreach ($CommandName in $CommandNames)
-            {
-                try
-                {
-                    $ResolvedCommand = Get-Command $CommandName -ErrorAction Stop
-
-                    if ($ResolveAlias -and $ResolvedCommand.CommandType -eq 'Alias')
-                    {
-                        [FunctionCallInfo]$ResolvedCommand.ResolvedCommand
-                    }
-                    else
-                    {
-                        [FunctionCallInfo]$ResolvedCommand
-                    }
-                }
-                catch [Management.Automation.CommandNotFoundException]
-                {
-                    [UnresolvedFunctionCallInfo]$CommandName
-
-                    $_.ErrorDetails = "Command resolution failed for command '$CommandName'$(if ($ModuleName) {" in module '$ModuleName'"})."
-                    Write-Error -ErrorRecord $_
-                }
-                catch
-                {
-                    Write-Error -ErrorRecord $_
-                }
-            }
-        }
-
-        [IFunctionCallInfo[]]$CalledCommands = if ($Function.Module)
+        #region Cache hit or parse and cache
+        # The call may have bottomed out on depth when it was first cached.
+        # A cache hit saves parsing; it doesn't save recursion.
+        $Found = $Script:CACHE[$Caller.Id]
+        if ($Found)
         {
-            $Function.Module.Invoke($Resolver, @($CalledCommandNames, $Function.Module.Name, $ResolveAlias))
+            Write-Debug "$Caller`: cache hit"
+            $Caller.CalledBy | ForEach-Object {[void]$Found.CalledBy.Add($_)}
+            $Caller = $Found
         }
         else
         {
-            & $Resolver $CalledCommandNames '' $ResolveAlias
-        }
+            $CallNames = $Command |
+                Where-Object Name |
+                Find-CallNameFromDefinition
 
+            $CallNames |
+                Resolve-Command -Module $Command.Module -ResolveAlias:$ResolveAlias |
+                Write-Output |
+                Where-Object Id -NE $Caller.Id |     # Don't include recursive calls
+                ForEach-Object {
+                    [void]$_.CalledBy.Add($Caller)
+                    $Caller.Calls.Add($_)
+                }
 
-        if (-not $All)
-        {
-            $CalledCommands = $CalledCommands | Where-Object Source -notmatch '^Microsoft.PowerShell'
+            Write-Debug "$Caller`: caching"
+            $Script:CACHE[$Caller.Id] = $Caller
         }
-
-        if (-not $CalledCommands)
-        {
-            return
-        }
-        #endregion Resolve commands
+        #endregion Cache hit or parse and cache
 
         #region Recurse
-        $RecurseParams = [hashtable]$PSBoundParameters
-        $RecurseParams.Remove('Name')
-        $RecurseParams.Remove('Function')
-        $RecurseParams.Remove('CallingFunction')
-        $RecurseParams.Depth = $Depth
-        $RecurseParams._CallDepth = ++$_CallDepth
-        $RecurseParams._SeenFunctions = $_SeenFunctions
+        $Calls = $Caller.Calls
+        if (-not $All)
+        {
+            $Calls = $Calls | Where-Object Source -notmatch '^Microsoft.PowerShell'
+        }
 
-        $CalledCommands | ForEach-Object {
-            $_.Depth = $_CallDepth
-            $_.CalledBy = $CallingFunction
-            $CallingFunction.Calls.Add($_)
-
-            [IFunctionCallInfo[]]$CallsOfCalls = $_ |
-                Where-Object CommandType -eq 'Function' |
-                Find-FunctionCall @RecurseParams |
-                Where-Object Name
-
-            $_ | Write-Output
-            $CallsOfCalls | Write-Output
+        if ($Calls)
+        {
+            $RecurseParams = @{
+                Depth           = $Depth
+                ResolveAlias    = $ResolveAlias
+                All             = $All
+                _CallDepth      = $_CallDepth + 1
+                _StackSeen      = $_StackSeen
+                WarningAction   = 'SilentlyContinue'
+                WarningVariable = 'Warnings'
+            }
+            $Calls | Find-Call @RecurseParams
         }
         #endregion Recurse
+
+        #region Output
+        if ($PSCmdlet.ParameterSetName -ne 'Recursing' -and -not $NoOutput)
+        {
+            if ($Warnings)
+            {
+                $Warnings | Sort-Object -Unique | Write-Warning
+            }
+
+            $Caller.AsList(0, 'Calls') | Where-Object {
+                $_.Depth -le $Depth -and
+                ($All -or $_.Source -notmatch '^Microsoft.PowerShell')
+            }
+        }
+        #endregion Output
     }
 }
