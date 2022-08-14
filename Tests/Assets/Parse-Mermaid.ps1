@@ -127,7 +127,8 @@ function Parse-Mermaid
                 $Version = '0.0'
             }
             [IO.FileInfo]$ManifestPath = Join-Path $OutPath "$Source.psd1"
-            New-ModuleManifest -Path $ManifestPath -ModuleVersion $Version -RootModule "$Source.psm1"
+            $Guid = ($Source.GetHashCode() -replace '-').PadRight(32, 'f')
+            New-ModuleManifest -Path $ManifestPath -ModuleVersion $Version -RootModule "$Source.psm1" -Guid $Guid
 
             $ModulePaths += $ManifestPath
         }
