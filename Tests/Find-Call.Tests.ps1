@@ -18,11 +18,17 @@ Describe "<_.BaseName>" -ForEach $TestCasePaths {
         $TestCases = $_.FullName | ForEach-Object {. $_} | Write-Output
     }
 
-    BeforeEach {
+    BeforeAll {
         # Clear call cache in the SUT
         & (Get-Module FindFunctionCalls) {if ($CACHE) {$CACHE.Clear()}}
+    }
 
-        $ModulePath | Import-Module
+    AfterEach {
+        $TestModules | Remove-Module
+    }
+
+    BeforeEach {
+        $TestModules = $ModulePath | Import-Module -PassThru -Force -DisableNameChecking
 
         # Do the thing
         $Output = Invoke-Expression "$Invocation -Debug:`$false" | Out-String | ForEach-Object Trim
