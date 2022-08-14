@@ -1,4 +1,4 @@
-version: 1.4.4.{build}
+version: "{build}"
 
 image: Visual Studio 2022
 
@@ -24,6 +24,10 @@ init:
         [int]$Build = $env:APPVEYOR_BUILD_NUMBER
         $BuildVersion = $Version, ++$Build -join '.'
         Update-AppVeyorBuild -Version $BuildVersion
+    }
+    else
+    {
+        Update-AppVeyorBuild -Version ($env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH, $env:APPVEYOR_BUILD_NUMBER -join '-')
     }
 
 build_script:
