@@ -1,3 +1,5 @@
+#requires -Modules @{ModuleName = 'Pester'; ModuleVersion = '5.3.3'}
+
 [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingInvokeExpression', '')]
 [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingWriteHost', '')]
 [Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssignments', '')]
