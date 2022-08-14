@@ -6,30 +6,31 @@
 param ()
 
 BeforeDiscovery {
-    # Generate test modules from the mermaid markdown
     $AssetPath = $PSCommandPath | Split-Path | Join-Path -ChildPath Assets
+    $Script:ModulePath = Join-Path $AssetPath TestModules
+
+    # Generate test cases from the mermaid markdown
     . (Join-Path $AssetPath Parse-Mermaid.ps1)
-    $TestCasePaths = Parse-Mermaid
+    $TestCasePath = Parse-Mermaid -OutPath 'Generated/TestCases.ps1'
+
+    $TestCases = & $TestCasePath
 }
 
-Describe "<_.BaseName>" -ForEach $TestCasePaths {
-
-    BeforeDiscovery {
-        $TestCases = $_.FullName | ForEach-Object {. $_} | Write-Output
-    }
+Describe "Examples from documentation" {
 
     BeforeAll {
         # Clear call cache in the SUT
         & (Get-Module FindFunctionCalls) {if ($CACHE) {$CACHE.Clear()}}
+
+        $ModulePaths = Get-ChildItem $ModulePath -Filter *.psd1
+        $TestModules = $ModulePaths | Import-Module -PassThru -Force -DisableNameChecking
     }
 
-    AfterEach {
+    AfterAll {
         $TestModules | Remove-Module
     }
 
     BeforeEach {
-        $TestModules = $ModulePath | Import-Module -PassThru -Force -DisableNameChecking
-
         # Do the thing
         $Output = Invoke-Expression "$Invocation -Debug:`$false" | Out-String | ForEach-Object Trim
 

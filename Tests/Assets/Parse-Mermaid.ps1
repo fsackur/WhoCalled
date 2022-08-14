@@ -5,27 +5,20 @@ function Parse-Mermaid
         Self-testing-documentation parser.
 
         .DESCRIPTION
-        Parse markdown containing mermaid function call diagrams and example usage code blocks;
-        generate PS module files that declare functions and test cases for use in unit tests.
+        Parse markdown containing example usage code blocks; generate unit test cases.
 
         .NOTES
         Each test case generates a module and defines one or more sub-test-cases.
 
-        The test case must start with an h2 heading (i.e. `## <title>'). The title is the name of
-        the generated test case.
+        The test cases are defined by fenced code blocks. Blocks must start with one or more PS
+        invocations, which begin with `>`, followed by any number of empty lines, then the expected
+        output.
 
-        The test cases are defined by fenced code blocks. The first block must be a mermaid graph.
-        Following blocks must start with one or more PS invocations, which begin with `>`, followed
-        by any number of empty lines, then the expected output.
-
-        Versions of the test modules are defined in the mermaid block by defining a member with
-        module name and version inside round brackets, as follows: `Module1(Foo, 1.2.3)`. The
-        `Module1` label does nothing; it's a necessary bit of mermaid syntax.
-
-        NB: the expected output will be processed again, to handle difference in output rendering on
+        The expected output will be processed again, to handle difference in output rendering on
         different systems.
 
-        Trailing whitespace is not allowed.
+        The command and module names will be prepended with an underscore, to prevent name clash
+        with common modules.
     #>
 
     [OutputType([IO.FileInfo])]
@@ -34,7 +27,7 @@ function Parse-Mermaid
     (
         [string]$Path = 'mermaid.md',
 
-        [string]$OutPath = 'Generated'
+        [string]$OutPath = 'TestCases.ps1'
     )
 
     if (-not [IO.Path]::IsPathRooted($Path))
@@ -50,99 +43,34 @@ function Parse-Mermaid
         $OutPath = $PSCommandPath |
             Split-Path |
             Join-Path -ChildPath $OutPath
-        $null = New-Item $OutPath -ItemType Directory -Force -ErrorAction Stop
+        $null = New-Item -ItemType Directory -Force -ErrorAction Ignore (Split-Path $OutPath)
     }
 
-
-
+    $Builder = [Text.StringBuilder]::new()
     $Content = Get-Content $Path -Raw
     $Chunks  = $Content -split '(?<=\n)## ' | Select-Object -Skip 1
 
     # Match mermaid code block, dropping the `graph TD` directive, or any other code block with
     # optional PS or plaintext languge directive
-    $Pattern = '(?<=```(mermaid\r?\ngraph (TD|LR);?|powershell|pwsh|plaintext|)\r?\n).*?(?=\r?\n```)'
+    $Pattern = '(?<=```((mermaid)\r?\ngraph (TD|LR);?|powershell|pwsh|plaintext|)\r?\n).*?(?=\r?\n```)'
     $Regex   = [regex]::new($Pattern, 'Singleline')
     foreach ($Chunk in $Chunks)
     {
-        $Title, $Chunk = $Chunk -split '\n', 2 | ForEach-Object Trim
-        $MermaidChunk, $Chunks = $Regex.Matches($Chunk).Value | Where-Object Length
-        $MermaidItems = $MermaidChunk -split '\r?\n' -replace '^\s*' -replace '[\s;]$'
+        $CodeBlocks = $Regex.Matches($Chunk) |
+            Where-Object {
+                $_.Value.Length -and
+                -not ($_.Groups.Value -eq 'mermaid')
+            } |
+            ForEach-Object Value
 
-        #region Build function map
-        $Sources = [ordered]@{}
-        $SourceVersions = @{}
-        foreach ($MermaidItem in $MermaidItems)
-        {
-            if ($MermaidItem -match 'Module\d\((?<Name>\S+)\s*(?<Version>(\d+\.)+\d+)')
-            {
-                $SourceVersions[$Matches.Name -replace '^', '_'] = $Matches.Version
-                continue
-            }
-
-            $Caller, $Call = $MermaidItem -split '-->', 2
-            $CallerName, $CallerSource = ($Caller -split '\\')[1,0]
-            $CallName, $CallSource = ($Call -split '\\')[1,0]
-            $CallerSource, $CallSource = $CallerSource, $CallSource -replace '^$', $Title -replace '^', '_'
-
-            $CallerName, $CallName = $CallerName, $CallName -replace '^', '_'
-
-            if (-not $Sources[$CallerSource])
-            {
-                $Sources[$CallerSource] = @{}
-            }
-            if (-not $Sources[$CallSource])
-            {
-                $Sources[$CallSource] = @{}
-            }
-
-            $Sources[$CallerSource][$CallerName] += @($CallName)
-            $Sources[$CallSource][$CallName] += @()
-        }
-        #endregion Build function map
-
-        $Builder = [Text.StringBuilder]::new()
-        $ModulePaths = @()
-
-        #region test module definitions
-        foreach ($Kvp in ($Sources.GetEnumerator() | Sort-Object Key))
-        {
-            $Source, $Functions = $Kvp.Key, $Kvp.Value
-
-            foreach ($Kvp in ($Functions.GetEnumerator() | Sort-Object Key))
-            {
-                $Name, $Calls = $Kvp.Key, $Kvp.Value
-                [void]$Builder.Append("function $Name").AppendLine('{')
-                $Calls | ForEach-Object {[void]$Builder.AppendLine("    $_")}
-                [void]$Builder.AppendLine('}')
-            }
-
-            [IO.FileInfo]$RootModulePath = Join-Path $OutPath "$Source.psm1"
-            $Builder.ToString() | Out-File $RootModulePath -Encoding utf8 -Force
-            [void]$Builder.Clear()
-
-
-            [version]$Version = $SourceVersions[$Source]
-            if (-not $Version)
-            {
-                $Version = '0.0'
-            }
-            [IO.FileInfo]$ManifestPath = Join-Path $OutPath "$Source.psd1"
-            $Guid = ($Source.GetHashCode() -replace '-').PadRight(32, 'f')
-            New-ModuleManifest -Path $ManifestPath -ModuleVersion $Version -RootModule "$Source.psm1" -Guid $Guid
-
-            $ModulePaths += $ManifestPath
-        }
-        #endregion test module definitions
-
-        #region $TestCases
-        # Output hashtables with Invocation, Expected and ModulePath keys
-        $Chunks | ForEach-Object {
+        # Output hashtables with Invocation and Expected keys
+        $CodeBlocks | ForEach-Object {
             $Lines      = $_ -split '\r?\n'
             $Invocation = $Lines.Where({$_ -notmatch '^>'}, 'Until') -replace '^>\s*'
             $Expected   = $Lines.Where({$_ -match '^[^>]'}, 'SkipUntil')
 
             $Invocation = $Invocation -replace '\b(?<!-)(?!Find-Call)(?=[a-z])', '_' -join '; '
-            $Expected = (
+            $Expected   = (
                 ($Expected[0] -replace 'Name', 'Name '),
                 ($Expected[1] -replace '(?<=^-+ +-+) ', '  '),
                 (
@@ -162,12 +90,10 @@ function Parse-Mermaid
                 AppendLine("'@").
                 Append('},')
         }
-        $Builder.Length = $Builder.Length - 1   # Drop the trailing comma
-
-        [IO.FileInfo]$_OutPath = Join-Path $OutPath "$Title.ps1"
-        $Builder.ToString() | Out-File $_OutPath -Encoding utf8 -Force
-
-        $_OutPath
-        #endregion $TestCases
     }
+    $Builder.Length = $Builder.Length - 1   # Drop the trailing comma
+
+    $Builder.ToString() | Out-File $OutPath -Encoding utf8 -Force
+
+    [IO.FileInfo]$OutPath
 }
