@@ -29,7 +29,15 @@
                 'AST',
                 'Dependency',
                 'Function',
-                'Parse'
+                'Parse',
+                'Parsing',
+                'Refactor',
+                'Refactoring',
+                'Analysis',
+                'CodeAnalysis',
+                'StaticAnalysis',
+                'Find-Call',
+                'Find-Caller'
             )
         }
     }
