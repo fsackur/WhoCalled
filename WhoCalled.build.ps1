@@ -24,7 +24,7 @@ task UpdateVersion {
 
 # Synopsis: Run PSSA, excluding Tests folder and *.build.ps1
 task PSSA {
-    $Files = Get-ChildItem -File -Recurse -Filter *.ps*1 | Where-Object FullName -notmatch '\bTests\b|\.build\.ps1$'
+    $Files = Get-ChildItem -File -Recurse -Filter *.ps*1 | Where-Object FullName -notmatch '\bTests\b|\.build\.ps1$|install-build-dependencies\.ps1'
     $Files | ForEach-Object {
         Invoke-ScriptAnalyzer -Path $_.FullName -Recurse -Settings .\.vscode\PSScriptAnalyzerSettings.psd1
     }
@@ -51,7 +51,7 @@ task Build {
     Copy-Item "LICENSE" $BuildFolder
     Copy-Item "WhoCalled.Format.ps1xml" $BuildFolder
 
-    'Classes', 'Public' | ForEach-Object {
+    'Classes', 'Private', 'Public' | ForEach-Object {
         "",
         "#region $_",
         ($_ | Get-ChildItem | Get-Content),
@@ -63,8 +63,12 @@ task Build {
 }
 
 # Synopsis: Import latest version of module from build folder
-Task Import {
-    Import-Module "$BuildRoot/Build/WhoCalled" -Force -ErrorAction Stop
+task Import {
+    Import-Module "$BuildRoot/Build/WhoCalled" -Force -Global -ErrorAction Stop
 }
 
-task . Clean, Build, Import
+task Test Clean, Build, Import, {
+    Invoke-Pester
+}
+
+task . Clean, Build, Import, PSSA, Test
