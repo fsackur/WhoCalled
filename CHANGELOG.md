@@ -1,5 +1,11 @@
 # WhoCalled
 
+## 2.0.0
+
+- Rename module `FindFunctionCalls` => `WhoCalled`
+- Rename `Find-FunctionCall` => `Find-Call`
+- Add `Find-Caller`
+
 ## 1.4.5
 
 - Build in Appveyor
