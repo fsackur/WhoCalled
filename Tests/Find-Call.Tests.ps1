@@ -20,7 +20,7 @@ Describe "Examples from documentation" {
 
     BeforeAll {
         # Clear call cache in the SUT
-        & (Get-Module FindFunctionCalls) {if ($CACHE) {$CACHE.Clear()}}
+        & (Get-Module WhoCalled) {if ($CACHE) {$CACHE.Clear()}}
 
         $ModulePaths = Get-ChildItem $ModulePath -Filter *.psd1
         $TestModules = $ModulePaths | Import-Module -PassThru -Force -DisableNameChecking

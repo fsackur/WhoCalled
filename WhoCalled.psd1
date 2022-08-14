@@ -1,7 +1,7 @@
 @{
     Description          = 'Build a tree of function calls.'
     ModuleVersion        = '1.4.5'
-    HelpInfoURI          = 'https://pages.github.com/fsackur/FindFunctionCalls'
+    HelpInfoURI          = 'https://pages.github.com/fsackur/WhoCalled'
 
     GUID                 = '7b5c6e30-13b1-4ff8-a3ca-f1151b346066'
 
@@ -9,7 +9,7 @@
     CompanyName          = 'DustyFox'
     Copyright            = '(c) 2022 Freddie Sackur. All rights reserved.'
 
-    RootModule           = 'FindFunctionCalls.psm1'
+    RootModule           = 'WhoCalled.psm1'
 
     AliasesToExport      = @()
     FunctionsToExport    = @(
@@ -18,13 +18,13 @@
     )
 
     FormatsToProcess     = @(
-        'FindFunctionCalls.Format.ps1xml'
+        'WhoCalled.Format.ps1xml'
     )
 
     PrivateData          = @{
         PSData = @{
-            LicenseUri = 'https://raw.githubusercontent.com/fsackur/FindFunctionCalls/main/LICENSE'
-            ProjectUri = 'https://github.com/fsackur/FindFunctionCalls'
+            LicenseUri = 'https://raw.githubusercontent.com/fsackur/WhoCalled/main/LICENSE'
+            ProjectUri = 'https://github.com/fsackur/WhoCalled'
             Tags       = @(
                 'AST',
                 'Dependency',

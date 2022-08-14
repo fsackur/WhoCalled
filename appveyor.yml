@@ -33,7 +33,7 @@ build_script:
     Invoke-Build
 
 artifacts:
-- path: ./Build/**FindFunctionCalls*.nupkg
+- path: ./Build/**WhoCalled*.nupkg
   name: NuGet package
 
 # If we updated the version in the build step, then we should commit and push
@@ -56,7 +56,7 @@ before_deploy:
 deploy:
 - provider: GitHub
   tag: $(APPVEYOR_REPO_TAG_NAME)
-  description: FindFunctionCalls $(APPVEYOR_REPO_TAG_NAME)
+  description: WhoCalled $(APPVEYOR_REPO_TAG_NAME)
   auth_token:
     secure: VBvtOx1GcfCw0CpszU3o51q+rXovGMjX25Ld2RUF3c2rF1kaGF+cF8OiB6U2fPbY
   artifact: NuGet package

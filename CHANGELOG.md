@@ -1,4 +1,4 @@
-# FindFunctionCalls
+# WhoCalled
 
 ## 1.4.5
 
