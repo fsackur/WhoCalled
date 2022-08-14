@@ -1,5 +1,9 @@
 # WhoCalled
 
+## 2.0.1
+
+- Build pipeline runs tests and publishes
+
 ## 2.0.0
 
 - Rename module `FindFunctionCalls` => `WhoCalled`

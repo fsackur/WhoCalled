@@ -2,7 +2,9 @@
 
 param
 (
-    [version]$NewVersion
+    [version]$NewVersion,
+
+    [string]$PSGalleryApiKey
 )
 
 # Synopsis: Update manifest version
@@ -24,7 +26,7 @@ task UpdateVersion {
 
 # Synopsis: Run PSSA, excluding Tests folder and *.build.ps1
 task PSSA {
-    $Files = Get-ChildItem -File -Recurse -Filter *.ps*1 | Where-Object FullName -notmatch '\bTests\b|\.build\.ps1$'
+    $Files = Get-ChildItem -File -Recurse -Filter *.ps*1 | Where-Object FullName -notmatch '\bTests\b|\.build\.ps1$|install-build-dependencies\.ps1'
     $Files | ForEach-Object {
         Invoke-ScriptAnalyzer -Path $_.FullName -Recurse -Settings .\.vscode\PSScriptAnalyzerSettings.psd1
     }
@@ -36,7 +38,7 @@ task Clean {
 }
 
 # Synopsis: Build module at manifest version
-task Build {
+task Build Clean, {
     $ManifestPath = "WhoCalled.psd1"
     $ManifestContent = Get-Content $ManifestPath -Raw
     $Manifest = Invoke-Expression "DATA {$ManifestContent}"
@@ -51,7 +53,7 @@ task Build {
     Copy-Item "LICENSE" $BuildFolder
     Copy-Item "WhoCalled.Format.ps1xml" $BuildFolder
 
-    'Classes', 'Public' | ForEach-Object {
+    'Classes', 'Private', 'Public' | ForEach-Object {
         "",
         "#region $_",
         ($_ | Get-ChildItem | Get-Content),
@@ -63,8 +65,20 @@ task Build {
 }
 
 # Synopsis: Import latest version of module from build folder
-Task Import {
-    Import-Module "$BuildRoot/Build/WhoCalled" -Force -ErrorAction Stop
+task Import Build, {
+    Import-Module "$BuildRoot/Build/WhoCalled" -Force -Global -ErrorAction Stop
 }
 
-task . Clean, Build, Import
+task Test Import, {
+    Invoke-Pester
+}
+
+task Publish Build, {
+    $UnversionedBase = "Build/WhoCalled"
+    $VersionedBase = Get-Module $UnversionedBase -ListAvailable | ForEach-Object ModuleBase
+    Get-ChildItem $VersionedBase | Copy-Item -Destination $UnversionedBase
+    remove $VersionedBase
+    Publish-PSResource -Verbose -Path $UnversionedBase -DestinationPath Build -Repository PSGallery -ApiKey $PSGalleryApiKey
+}
+
+task . PSSA, Test
