@@ -30,7 +30,7 @@ build_script:
 - pwsh: |
     ./install-build-dependencies.ps1
 
-    Invoke-Build
+    Invoke-Build Test
 
 artifacts:
 - path: ./Build/**WhoCalled*.nupkg
