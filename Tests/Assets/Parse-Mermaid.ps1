@@ -34,7 +34,7 @@ function Parse-Mermaid
     (
         [string]$Path = 'mermaid.md',
 
-        [string]$OutPath
+        [string]$OutPath = 'Generated'
     )
 
     if (-not [IO.Path]::IsPathRooted($Path))
