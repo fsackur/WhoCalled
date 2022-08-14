@@ -1,25 +1,35 @@
-function _Find-Package{
-}
-function _Get-Package{
-}
-function _Get-PackageProvider{
-}
-function _Get-PackageSource{
-}
-function _Import-PackageProvider{
-}
-function _Install-Package{
-}
-function _Install-PackageProvider{
-}
-function _Register-PackageSource{
-}
-function _Save-Package{
-}
-function _Set-PackageSource{
-}
-function _Uninstall-Package{
-}
-function _Unregister-PackageSource{
-}
+$CmdletsToExport = (
+    '_Find-Package',
+    '_Get-Package',
+    '_Get-PackageProvider',
+    '_Get-PackageSource',
+    '_Import-PackageProvider',
+    '_Install-Package',
+    '_Install-PackageProvider',
+    '_Register-PackageSource',
+    '_Save-Package',
+    '_Set-PackageSource',
+    '_Uninstall-Package',
+    '_Unregister-PackageSource'
+)
 
+# https://seeminglyscience.github.io/powershell/2017/04/13/cmdlet-creation-with-powershell
+#region Define cmdlets
+class TestCmdlet : Management.Automation.PSCmdlet {[void] ProcessRecord() {}}
+
+$SessionState = [Management.Automation.SessionState].
+    GetProperty('Internal', [Reflection.BindingFlags]'Instance, NonPublic').
+    GetValue($ExecutionContext.SessionState)
+
+foreach ($Cmdlet in $CmdletsToExport)
+{
+    $CmdletEntry = [Management.Automation.Runspaces.SessionStateCmdletEntry]::new($Cmdlet, [TestCmdlet], $null)
+    $SessionState.GetType().InvokeMember(
+        'AddSessionStateEntry',
+        [Reflection.BindingFlags]'InvokeMethod, Instance, NonPublic',
+        $null,
+        $SessionState,
+        @($CmdletEntry, $true)
+    )
+}
+#endregion Define cmdlets
