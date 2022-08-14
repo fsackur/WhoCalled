@@ -1,4 +1,4 @@
-function Parse-Mermaid
+function Import-TestCase
 {
     <#
         .SYNOPSIS

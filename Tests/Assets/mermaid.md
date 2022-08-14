@@ -2,7 +2,7 @@
 
 _Developed in `VS Code` with the `bierner.markdown-mermaid` extension._
 
-<!-- See Parse-Mermaid.ps1 for formatting guidance and limitations -->
+<!-- See Import-TestCase.ps1 for formatting guidance and limitations -->
 
 ## Diamond
 

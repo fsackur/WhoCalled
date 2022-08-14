@@ -10,8 +10,8 @@ BeforeDiscovery {
     $Script:ModulePath = Join-Path $AssetPath TestModules
 
     # Generate test cases from the mermaid markdown
-    . (Join-Path $AssetPath Parse-Mermaid.ps1)
-    $TestCasePath = Parse-Mermaid -OutPath 'Generated/TestCases.ps1'
+    . (Join-Path $AssetPath Import-TestCase.ps1)
+    $TestCasePath = Import-TestCase -OutPath 'Generated/TestCases.ps1'
 
     $TestCases = & $TestCasePath
 }
