@@ -2,7 +2,9 @@
 
 param
 (
-    [version]$NewVersion
+    [version]$NewVersion,
+
+    [string]$PSGalleryApiKey
 )
 
 # Synopsis: Update manifest version
@@ -36,7 +38,7 @@ task Clean {
 }
 
 # Synopsis: Build module at manifest version
-task Build {
+task Build Clean, {
     $ManifestPath = "WhoCalled.psd1"
     $ManifestContent = Get-Content $ManifestPath -Raw
     $Manifest = Invoke-Expression "DATA {$ManifestContent}"
@@ -63,12 +65,20 @@ task Build {
 }
 
 # Synopsis: Import latest version of module from build folder
-task Import {
+task Import Build, {
     Import-Module "$BuildRoot/Build/WhoCalled" -Force -Global -ErrorAction Stop
 }
 
-task Test Clean, Build, Import, {
+task Test Import, {
     Invoke-Pester
 }
 
-task . Clean, Build, Import, PSSA, Test
+task Publish Build, {
+    $UnversionedBase = "Build/WhoCalled"
+    $VersionedBase = Get-Module $UnversionedBase -ListAvailable | ForEach-Object ModuleBase
+    Get-ChildItem $VersionedBase | Copy-Item -Destination $UnversionedBase
+    remove $VersionedBase
+    Publish-PSResource -Verbose -Path $UnversionedBase -DestinationPath Build -Repository PSGallery -ApiKey $PSGalleryApiKey
+}
+
+task . PSSA, Test
