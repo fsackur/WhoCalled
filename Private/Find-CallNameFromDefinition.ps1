@@ -5,6 +5,8 @@ function Find-CallNameFromDefinition
         Parse a function definition to find all commands called from the function.
     #>
 
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSReviewUnusedParameter', 'TokenFlags', Justification = "It's used in a scriptblock")]
+
     [OutputType([string[]])]
     [CmdletBinding(DefaultParameterSetName = 'FromFunction')]
     param

@@ -8,6 +8,8 @@ function Resolve-Command
         scope. This allows resolution of private commands.
     #>
 
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSReviewUnusedParameter', 'ResolveAlias', Justification = "It's used in a scriptblock")]
+
     [OutputType([CallInfo[]])]
     [CmdletBinding()]
     param
