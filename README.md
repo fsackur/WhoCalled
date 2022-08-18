@@ -1,8 +1,12 @@
 # WhoCalled
 
+[![Build status](https://ci.appveyor.com/api/projects/status/0969yg2toi22iwkq/branch/main?svg=true)](https://ci.appveyor.com/project/fsackur/whocalled/branch/main)
+
 Show function calls as a tree.
 
-This module is a tool to determine dependencies at the function level. If you want to make a change in a function, this can tell you what other functions need to be changed.
+This module is a tool to determine dependencies at the function level.
+
+If you want to make a change in a function, this can tell you what other functions need to be changed or tested.
 
 ## Example
 
