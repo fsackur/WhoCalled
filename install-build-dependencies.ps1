@@ -5,7 +5,7 @@ $Dependencies = (
     },
     @{
         Name = 'PowerShellGet'
-        MinimumVersion = '3.0.0'
+        MinimumVersion = '3.0.16'
     },
     @{
         Name = 'InvokeBuild'
