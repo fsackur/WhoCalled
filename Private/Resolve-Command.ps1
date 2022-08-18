@@ -51,7 +51,7 @@ function Resolve-Command
         [CallInfo[]]$Calls = if ($Module)
         {
             # Running Get-Command for a non-imported module gives an uninitialised module object
-            $Module = Import-Module $Module -PassThru
+            $Module = Import-Module $Module -PassThru -DisableNameChecking
 
             $Module.Invoke($Resolver, @($Name, $Module.Name, $ResolveAlias))
         }

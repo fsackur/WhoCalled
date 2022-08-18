@@ -109,7 +109,7 @@ function Find-Caller
             $ToImport | ForEach-Object {
                 $Percent = 100 * $i++ / $ToImport.Count
                 Write-Progress -Activity $Activity -Status $_ -PercentComplete $Percent
-                $Modules += Import-Module $_ -PassThru
+                $Modules += Import-Module $_ -PassThru -DisableNameChecking
             }
             Write-Progress -Activity $Activity -Completed
         }
