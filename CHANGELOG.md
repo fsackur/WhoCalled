@@ -1,5 +1,9 @@
 # WhoCalled
 
+## 2.0.2
+
+- Disable name checking when importing modules
+
 ## 2.0.1
 
 - Build pipeline runs tests and publishes
